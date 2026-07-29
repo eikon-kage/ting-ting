@@ -7,15 +7,16 @@ import 'package:flutter/material.dart';
 /// vắt gần hết chroma, sinh `primary` là `#8E4D2E` — tức đúng màu nâu mà app
 /// dùng trước khi đổi sang cam, đổi seed mà nhìn vào không thấy khác gì.
 ///
-/// `fidelity` giữ nền trung tính y như `tonalSpot` (`surface` sáng vẫn là
-/// `#FFF8F6`) nhưng bám sát hạt giống ở các vai trò nhấn.
-///
-/// Không vai trò nào phải đặt lại bằng tay:
+/// `fidelity` bám sát hạt giống ở các vai trò nhấn:
 ///
 /// - `primary` `#A14000` — 6.5:1 với chữ trắng.
-/// - `primaryContainer` đúng bằng `#FF6900`, tức chính màu được yêu cầu; đây là
-///   chỗ cam hiện rõ nhất (indicator thanh điều hướng, chip đang chọn,
-///   segmented button). 4.5:1 với `onPrimaryContainer`, vừa đủ AA.
+/// Đổi lại nó bão hoà quá tay ở hai chỗ, cả hai đều phải đặt lại bằng tay:
+///
+/// - họ `surface` bị ám cam theo — xem [_neutralSurfaces];
+/// - `primaryContainer` ra đúng `#FF6900` — xem [_mutedPrimaryContainer].
+///
+/// Cả hai đều chỉ hạ độ bão hoà của nền. Cam vẫn là màu nhận diện, chỉ còn ở
+/// những mảng nhỏ mà mắt không phải nhìn lâu.
 class AppTheme {
   const AppTheme._();
 
@@ -36,19 +37,83 @@ class AppTheme {
   static const Color brand = Color(0xFFFF6900);
 
   static ThemeData light() => _build(
-    ColorScheme.fromSeed(
-      seedColor: brand,
-      dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+    _mutedPrimaryContainer(
+      _neutralSurfaces(
+        ColorScheme.fromSeed(
+          seedColor: brand,
+          dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+        ),
+      ),
     ),
   );
 
+  /// Thay họ `surface` của bảng sáng bằng thang gần như trung tính.
+  ///
+  /// `fidelity` sinh nền ám cam khá nặng: `surfaceContainerHigh` ra `#FEE3D8`,
+  /// tức hồng đào thấy rõ — mà đúng vai trò đó lát nền cho chip, ô nhập, thanh
+  /// điều hướng và mọi khối phụ, nên cả màn hình như bị phủ một lớp cam. Thang
+  /// dưới đây giữ nguyên thứ tự đậm dần, chỉ còn chút hơi ấm (chênh lệch giữa
+  /// kênh đỏ và kênh lam còn 3–4/255 thay vì 30–40) để không lạnh hẳn sang xám
+  /// xanh.
+  ///
+  /// Chỉ đụng vào nền và chữ trên nền; `primary` vẫn lấy từ hạt giống.
+  ///
+  /// Tương phản trên nền mới: `onSurface` 16:1, `onSurfaceVariant` 7.7:1 (còn
+  /// 6.4:1 khi nằm trên `surfaceContainerHighest`) — đều vượt AA.
+  static ColorScheme _neutralSurfaces(ColorScheme scheme) => scheme.copyWith(
+    surface: const Color(0xFFFDFBFA),
+    surfaceBright: const Color(0xFFFDFBFA),
+    surfaceDim: const Color(0xFFEDE9E7),
+    surfaceContainerLowest: const Color(0xFFFFFFFF),
+    surfaceContainerLow: const Color(0xFFFAF7F6),
+    surfaceContainer: const Color(0xFFF5F2F0),
+    surfaceContainerHigh: const Color(0xFFEFECEA),
+    surfaceContainerHighest: const Color(0xFFEAE6E4),
+    onSurface: const Color(0xFF221D1B),
+    onSurfaceVariant: const Color(0xFF56504D),
+    outline: const Color(0xFF857D79),
+    outlineVariant: const Color(0xFFE0DBD8),
+  );
+
   static ThemeData dark() => _build(
-    ColorScheme.fromSeed(
-      seedColor: brand,
-      brightness: Brightness.dark,
-      dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+    _mutedPrimaryContainer(
+      ColorScheme.fromSeed(
+        seedColor: brand,
+        brightness: Brightness.dark,
+        dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+      ),
     ),
   );
+
+  /// Hạ `primaryContainer` từ cam đặc xuống xám ấm.
+  ///
+  /// `fidelity` cho `primaryContainer` đúng bằng hạt giống, tức `#FF6900` ở
+  /// nguyên chroma. Vai trò này chỉ được dùng làm nền tô kín, và toàn ở mảng
+  /// lớn thường trực trên màn: indicator thanh điều hướng, chip đang chọn,
+  /// segmented button, nút lọc ngày, thẻ số dư trang chủ, thẻ tổng quan và dải
+  /// số dư của sổ nợ, vòng tròn icon empty state, avatar hạng mục. Trải cam
+  /// bão hoà lên chừng đó diện tích thì nhìn lâu chói mắt.
+  ///
+  /// Xám ấm dưới đây đậm hơn nền thường đúng một nấc thấy được. Cam vẫn còn ở
+  /// `primary` `#A14000` — FAB, nút chính, viền ô nhập đang focus — nên app
+  /// không mất hẳn màu nhận diện, chỉ là màu lùi về mấy chi tiết nhỏ.
+  ///
+  /// Đánh đổi đã biết: trạng thái đang chọn không còn tín hiệu màu, nên độ đậm
+  /// chữ (w700 so với w500) và viền `outline` đậm phải gánh phần phân biệt.
+  /// Đừng hạ hai thứ đó xuống.
+  ///
+  /// Tương phản với `onPrimaryContainer`: 9.1:1 ở bảng sáng, 8.4:1 ở bảng tối —
+  /// đều vượt AAA cho cỡ chữ thường, so với 4.5:1 vừa đủ AA của cặp cam cũ.
+  static ColorScheme _mutedPrimaryContainer(ColorScheme scheme) =>
+      scheme.brightness == Brightness.dark
+      ? scheme.copyWith(
+          primaryContainer: const Color(0xFF4A3A33),
+          onPrimaryContainer: const Color(0xFFEFE1DA),
+        )
+      : scheme.copyWith(
+          primaryContainer: const Color(0xFFE4DDD8),
+          onPrimaryContainer: const Color(0xFF3D332E),
+        );
 
   static ThemeData _build(ColorScheme scheme) {
     final base = ThemeData(colorScheme: scheme, useMaterial3: true);
@@ -114,7 +179,7 @@ class AppTheme {
                 ? FontWeight.w700
                 : FontWeight.w500,
             color: states.contains(WidgetState.selected)
-                ? scheme.primary
+                ? scheme.onPrimaryContainer
                 : scheme.onSurfaceVariant,
           ),
         ),
@@ -183,10 +248,39 @@ class AppTheme {
           fontWeight: FontWeight.w700,
           color: scheme.onPrimaryContainer,
         ),
-        selectedColor: scheme.primaryContainer,
+        // Phải khai bằng `color` chứ không phải cặp `backgroundColor` +
+        // `selectedColor`, dù cặp kia đọc gọn hơn.
+        //
+        // `RawChip._getBackgroundColor` dựng một `ColorTween` từ nền thường
+        // sang nền chọn, và nó tính đầu "nền thường" bằng cách gọi
+        // `resolveColor` mà không truyền `selectedColor`. Trong lúc chip đang ở
+        // trạng thái chọn, `_IndividualOverrides.resolve` gặp `selected` thì
+        // trả thẳng `selectedColor` — ở đây là `null` — nên rơi xuống mặc định
+        // M3 `_FilterChipDefaultsM3.color`, tức `secondaryContainer`. Với hạt
+        // giống này màu đó là `#FF9969`, cam sáng. Kết quả: bấm chọn thì nền
+        // nháy nguyên một nhịp cam rồi mới fade về xám.
+        //
+        // `resolve` short-circuit ngay khi `color != null`, nên khai một
+        // `WidgetStateProperty` là bịt được cả hai đầu tween.
+        color: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return scheme.onSurface.withValues(alpha: 0.12);
+          }
+          if (states.contains(WidgetState.selected)) {
+            return scheme.primaryContainer;
+          }
+          return scheme.surfaceContainerHigh;
+        }),
         checkmarkColor: scheme.onPrimaryContainer,
-        backgroundColor: scheme.surfaceContainerHigh,
-        side: BorderSide(color: scheme.outlineVariant),
+        // Nền chọn chỉ đậm hơn nền thường một nấc, nên viền phải gánh thêm:
+        // chip đang chọn lấy `outline` đậm, chip thường giữ `outlineVariant`.
+        side: WidgetStateBorderSide.resolveWith(
+          (states) => BorderSide(
+            color: states.contains(WidgetState.selected)
+                ? scheme.outline
+                : scheme.outlineVariant,
+          ),
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
 

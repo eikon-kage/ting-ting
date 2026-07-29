@@ -3,10 +3,15 @@ import 'package:intl/intl.dart';
 export '../core/money.dart';
 
 final DateFormat _dayFormat = DateFormat('dd/MM/yyyy');
+final DateFormat _dayShortFormat = DateFormat('dd/MM');
 final DateFormat _timeFormat = DateFormat('HH:mm');
 
 String formatDay(DateTime d) => _dayFormat.format(d);
 String formatTime(DateTime d) => _timeFormat.format(d);
+
+/// "28/07" — bỏ năm, dùng ở những chỗ chật như nhãn khoảng lọc hay dòng phụ
+/// trong danh sách, nơi năm gần như luôn là năm nay.
+String formatDayShort(DateTime d) => _dayShortFormat.format(d);
 
 String formatMonth(DateTime d) => 'Tháng ${d.month}/${d.year}';
 

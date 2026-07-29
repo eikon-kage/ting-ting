@@ -87,12 +87,12 @@ class _DateButton extends StatelessWidget {
       label: FittedBox(fit: BoxFit.scaleDown, child: Text(label, maxLines: 1)),
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 10),
-        // Đầu đang chặn thì tô nền cam nhạt, đầu để ngỏ thì viền mờ — nhìn là
-        // biết khoảng đang mở về phía nào.
+        // Đầu đang chặn thì tô nền xám đậm và viền đậm, đầu để ngỏ thì viền mờ
+        // — nhìn là biết khoảng đang mở về phía nào.
         foregroundColor: selected ? scheme.onPrimaryContainer : null,
         backgroundColor: selected ? scheme.primaryContainer : null,
         side: BorderSide(
-          color: selected ? scheme.primary : scheme.outlineVariant,
+          color: selected ? scheme.outline : scheme.outlineVariant,
         ),
       ),
     );
