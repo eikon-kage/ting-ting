@@ -94,6 +94,7 @@ class _PeriodTabs extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: SegmentedButton<DigestPeriod>(
+        showSelectedIcon: false,
         segments: const [
           ButtonSegment(value: DigestPeriod.week, label: Text('Tuần này')),
           ButtonSegment(value: DigestPeriod.month, label: Text('Tháng này')),

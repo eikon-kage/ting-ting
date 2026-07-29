@@ -91,6 +91,7 @@ class _AddTxnPageState extends State<AddTxnPage> {
             padding: const EdgeInsets.all(20),
             children: [
               SegmentedButton<TxnDirection>(
+                showSelectedIcon: false,
                 segments: const [
                   ButtonSegment(
                     value: TxnDirection.expense,
@@ -144,6 +145,7 @@ class _AddTxnPageState extends State<AddTxnPage> {
               Text('Tiền ra/vào ví nào', style: theme.textTheme.labelLarge),
               const SizedBox(height: 8),
               SegmentedButton<AccountKind>(
+                showSelectedIcon: false,
                 segments: const [
                   ButtonSegment(
                     value: AccountKind.cash,

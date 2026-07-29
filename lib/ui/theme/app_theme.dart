@@ -282,7 +282,14 @@ class AppTheme {
           }
           return scheme.surfaceContainerHigh;
         }),
-        checkmarkColor: scheme.onPrimaryContainer,
+        // No checkmark on a selected chip. It shoves the label sideways on
+        // select, so a row of chips reflows every tap, and it costs the width
+        // of a glyph on a screen where these rows already scroll horizontally.
+        //
+        // Selection still has three cues without it: the tinted fill, the
+        // darker `outline` border, and the label at w700 against w600. Two of
+        // those survive greyscale, so this does not lean on colour alone.
+        showCheckmark: false,
         // Nền chọn chỉ đậm hơn nền thường một nấc, nên viền phải gánh thêm:
         // chip đang chọn lấy `outline` đậm, chip thường giữ `outlineVariant`.
         side: WidgetStateBorderSide.resolveWith(

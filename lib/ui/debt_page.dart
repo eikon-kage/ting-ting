@@ -386,6 +386,7 @@ class _AssignDebtSheetState extends State<_AssignDebtSheet> {
               ),
               const SizedBox(height: 16),
               SegmentedButton<DebtType>(
+                showSelectedIcon: false,
                 segments: [
                   for (final option in _controller.options)
                     ButtonSegment(value: option, label: Text(option.label)),

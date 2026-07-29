@@ -1073,6 +1073,7 @@ class _TxnDetailSheetState extends State<TxnDetailSheet> {
                           'Khoản này không tính vào thu chi.',
               ),
             SegmentedButton<TxnDirection>(
+              showSelectedIcon: false,
               segments: const [
                 ButtonSegment(
                   value: TxnDirection.expense,

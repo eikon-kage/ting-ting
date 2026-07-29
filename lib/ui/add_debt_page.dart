@@ -185,6 +185,7 @@ class _AddDebtPageState extends State<AddDebtPage> {
                 ),
                 const SizedBox(height: 8),
                 SegmentedButton<AccountKind>(
+                  showSelectedIcon: false,
                   segments: const [
                     ButtonSegment(
                       value: AccountKind.cash,
