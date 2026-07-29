@@ -659,7 +659,7 @@ class _PreviewResult extends StatelessWidget {
         Row(
           children: [
             Icon(
-              income ? Icons.south_west_rounded : Icons.north_east_rounded,
+              income ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
               size: 18,
               color: color,
             ),

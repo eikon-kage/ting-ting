@@ -574,7 +574,7 @@ class _OverviewCardState extends State<_OverviewCard> {
                   children: [
                     Expanded(
                       child: _FlowCell(
-                        icon: Icons.south_west_rounded,
+                        icon: Icons.arrow_downward_rounded,
                         label: 'Thu',
                         value: formatMoney(widget.totals.income),
                         color: palette.incomeText,
@@ -582,7 +582,7 @@ class _OverviewCardState extends State<_OverviewCard> {
                     ),
                     Expanded(
                       child: _FlowCell(
-                        icon: Icons.north_east_rounded,
+                        icon: Icons.arrow_upward_rounded,
                         label: 'Chi',
                         value: formatMoney(widget.totals.expense),
                         color: palette.expenseText,
@@ -912,8 +912,8 @@ class _TxnTile extends StatelessWidget {
                     : txn.isTransfer
                     ? Icons.swap_horiz_rounded
                     : (isIncome
-                          ? Icons.south_west_rounded
-                          : Icons.north_east_rounded),
+                          ? Icons.arrow_downward_rounded
+                          : Icons.arrow_upward_rounded),
                 color: amountColor,
                 size: 18,
               ),
@@ -1079,12 +1079,12 @@ class _TxnDetailSheetState extends State<TxnDetailSheet> {
                 ButtonSegment(
                   value: TxnDirection.expense,
                   label: Text('Chi'),
-                  icon: Icon(Icons.north_east_rounded),
+                  icon: Icon(Icons.arrow_upward_rounded),
                 ),
                 ButtonSegment(
                   value: TxnDirection.income,
                   label: Text('Thu'),
-                  icon: Icon(Icons.south_west_rounded),
+                  icon: Icon(Icons.arrow_downward_rounded),
                 ),
               ],
               selected: {txn.direction},

@@ -230,8 +230,8 @@ class _GapTile extends StatelessWidget {
               children: [
                 Icon(
                   isIncome
-                      ? Icons.south_west_rounded
-                      : Icons.north_east_rounded,
+                      ? Icons.arrow_downward_rounded
+                      : Icons.arrow_upward_rounded,
                   color: isIncome ? scheme.primary : scheme.error,
                 ),
                 const SizedBox(width: 8),

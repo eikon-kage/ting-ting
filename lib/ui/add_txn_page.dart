@@ -96,12 +96,12 @@ class _AddTxnPageState extends State<AddTxnPage> {
                   ButtonSegment(
                     value: TxnDirection.expense,
                     label: Text('Chi'),
-                    icon: Icon(Icons.north_east_rounded),
+                    icon: Icon(Icons.arrow_upward_rounded),
                   ),
                   ButtonSegment(
                     value: TxnDirection.income,
                     label: Text('Thu'),
-                    icon: Icon(Icons.south_west_rounded),
+                    icon: Icon(Icons.arrow_downward_rounded),
                   ),
                 ],
                 selected: {_controller.direction},

@@ -249,7 +249,9 @@ class _ShiftCard extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: ListTile(
         leading: Icon(
-          rising ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+          // Trend glyph, not a plain arrow: straight arrows now mean thu/chi
+          // everywhere else, and this row is about tăng/giảm.
+          rising ? Icons.trending_up_rounded : Icons.trending_down_rounded,
           color: color,
         ),
         title: Text(
