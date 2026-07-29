@@ -46,6 +46,34 @@ class SummaryWidget {
     _lifecycle = null;
   }
 
+  /// Hệ thống có nhận yêu cầu ghim ô ra màn hình chính không. Sai thì đừng hiện
+  /// nút mời user bấm vào chỗ không dẫn tới đâu.
+  Future<bool> canPin() async {
+    if (!supported) return false;
+    return await _invoke<bool>('canPin') ?? false;
+  }
+
+  /// Nhờ hệ thống hỏi "thêm ô này ra màn hình chính?".
+  ///
+  /// Cần nút này vì khay chọn widget của HyperOS không liệt kê widget của app
+  /// bên thứ ba: không có đường nào khác để đặt ô ra màn hình trên máy Xiaomi.
+  Future<bool> pin() async {
+    if (!supported) return false;
+    return await _invoke<bool>('pin') ?? false;
+  }
+
+  Future<T?> _invoke<T>(String method) async {
+    try {
+      return await _channel.invokeMethod<T>(method);
+    } on MissingPluginException {
+      // Không có Activity nào nhận kênh — app đang chạy nền.
+      return null;
+    } on PlatformException catch (e) {
+      debugPrint('lỗi kênh widget khi gọi $method: ${e.message}');
+      return null;
+    }
+  }
+
   Future<void> refresh() async {
     if (!supported) return;
 

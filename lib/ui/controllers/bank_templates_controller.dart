@@ -3,6 +3,7 @@ import '../../domain/notification_privacy.dart';
 import '../../models/models.dart';
 import '../../services/capture_service.dart';
 import '../../services/notification_capture.dart';
+import '../../services/summary_widget.dart';
 import 'base_controller.dart';
 
 /// Một app gửi thông báo, nhìn từ màn cấu hình ngân hàng.
@@ -52,8 +53,13 @@ class BankTemplatesController extends BaseController {
   final NotificationCapture _capture;
   final CaptureService _service;
 
+  // Singleton, không nhận qua constructor như hai cái trên: constructor của nó
+  // là private nên có nhận cũng không dựng được bản giả để test.
+  final SummaryWidget _widget = SummaryWidget.instance;
+
   List<BankTemplateEntry> _entries = const [];
   bool _capturing = false;
+  bool _canPinWidget = false;
 
   List<BankTemplateEntry> get entries => _entries;
 
@@ -62,6 +68,10 @@ class BankTemplatesController extends BaseController {
   bool get capturing => _capturing;
 
   bool get captureSupported => _service.supported;
+
+  /// Hệ thống chịu ghim ô thu chi ra màn hình chính — quyết định có hiện nút
+  /// thêm ô hay không.
+  bool get canPinWidget => _canPinWidget;
 
   List<BankTemplateEntry> get active =>
       _entries.where((e) => e.enabled).toList();
@@ -77,8 +87,13 @@ class BankTemplatesController extends BaseController {
 
   Future<void> init() async {
     watchData();
+    _canPinWidget = await _widget.canPin();
     await refresh();
   }
+
+  /// Bật hộp thoại "thêm ô ra màn hình chính" của hệ thống. Trả về false khi
+  /// launcher từ chối — lúc đó chỉ còn cách thêm tay từ khay widget.
+  Future<bool> pinWidget() => _widget.pin();
 
   /// Bật hoặc tắt hẳn việc theo dõi nền.
   Future<void> setCapturing({required bool enabled}) async {
@@ -102,7 +117,10 @@ class BankTemplatesController extends BaseController {
     final configured = await data.parserProfiles.configuredPackages();
 
     final byPackage = {for (final s in sources) s.packageName: s};
-    final names = <String>{...byPackage.keys, ...packages.map((p) => p.packageName)};
+    final names = <String>{
+      ...byPackage.keys,
+      ...packages.map((p) => p.packageName),
+    };
     final activity = {for (final p in packages) p.packageName: p};
 
     final entries = [

@@ -49,6 +49,17 @@ class _BankTemplatesPageState extends State<BankTemplatesPage> {
     );
   }
 
+  Future<void> _pinWidget() async {
+    if (await _controller.pinWidget() || !mounted) return;
+    // Chỉ báo khi hỏng: lúc chạy được thì hộp thoại của hệ thống đã che hết
+    // màn hình, snackbar nằm dưới đó không ai đọc.
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Màn hình chính không nhận ô — thử thêm từ khay widget'),
+      ),
+    );
+  }
+
   Future<void> _openTemplate(BankTemplateEntry entry) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -107,11 +118,18 @@ class _BankTemplatesPageState extends State<BankTemplatesPage> {
                       _controller.setCapturing(enabled: value),
                 )
               : null;
+          final pinWidget = _controller.canPinWidget
+              ? _PinWidgetTile(onTap: _pinWidget)
+              : null;
           if (_controller.isEmpty) {
             // Expanded chứ không phải ListView: [_EmptyList] căn giữa theo
             // chiều cao nên cần một khung có chiều cao xác định.
             return Column(
-              children: [?capture, const Expanded(child: _EmptyList())],
+              children: [
+                ?capture,
+                ?pinWidget,
+                const Expanded(child: _EmptyList()),
+              ],
             );
           }
           final active = _controller.active;
@@ -121,6 +139,7 @@ class _BankTemplatesPageState extends State<BankTemplatesPage> {
             child: ListView(
               children: [
                 ?capture,
+                ?pinWidget,
                 if (_controller.hasRedacted) const _RedactedBanner(),
                 if (active.isNotEmpty) const _SectionHeader('Đang ghi nhận'),
                 for (final entry in active) _tile(entry),
@@ -170,11 +189,7 @@ class _BankTemplatesPageState extends State<BankTemplatesPage> {
           ),
           if (entry.hasProfile) ...[
             const SizedBox(width: 6),
-            Icon(
-              Icons.verified_rounded,
-              size: 16,
-              color: scheme.primary,
-            ),
+            Icon(Icons.verified_rounded, size: 16, color: scheme.primary),
           ],
         ],
       ),
@@ -222,7 +237,9 @@ class _CaptureBanner extends StatelessWidget {
                 'thanh trạng thái là của phần này — Android bắt buộc phải có.'
           : 'App chỉ ghi được giao dịch khi đang mở. Vuốt app khỏi recents là '
                 'bỏ lỡ mọi thông báo cho tới lúc mở lại.',
-      background: running ? scheme.primaryContainer : scheme.surfaceContainerHigh,
+      background: running
+          ? scheme.primaryContainer
+          : scheme.surfaceContainerHigh,
       foreground: running ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       action: Align(
@@ -239,6 +256,30 @@ class _CaptureBanner extends StatelessWidget {
                 label: const Text('Bật theo dõi'),
               ),
       ),
+    );
+  }
+}
+
+/// Nút đặt ô tổng quan ra màn hình chính.
+///
+/// Tưởng thừa — launcher nào chả có khay chọn widget — nhưng khay của HyperOS
+/// không liệt kê widget của app bên thứ ba, nên trên máy Xiaomi đây là đường
+/// duy nhất đặt được ô ra ngoài.
+class _PinWidgetTile extends StatelessWidget {
+  const _PinWidgetTile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.widgets_outlined),
+      title: const Text('Thêm ô thu chi ra màn hình chính'),
+      subtitle: const Text(
+        'Ô lớn hiện tiền đã chi tháng này, thu, còn lại và số dư.',
+      ),
+      trailing: const Icon(Icons.add_rounded),
+      onTap: onTap,
     );
   }
 }
