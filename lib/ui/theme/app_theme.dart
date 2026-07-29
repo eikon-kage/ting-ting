@@ -1,40 +1,46 @@
 import 'package:flutter/material.dart';
 
-/// Chủ đề của app: tông cam, chữ to rõ, icon bo tròn.
+/// The app's theme: large readable type, rounded icons, one accent per scheme.
 ///
-/// Bảng màu dựng từ hạt giống [brand] theo biến thể `fidelity`. Đừng đổi về
-/// `tonalSpot` (biến thể mặc định của Material 3): với hạt giống này `tonalSpot`
-/// vắt gần hết chroma, sinh `primary` là `#8E4D2E` — tức đúng màu nâu mà app
-/// dùng trước khi đổi sang cam, đổi seed mà nhìn vào không thấy khác gì.
+/// Only the dark scheme ships — `main.dart` pins `themeMode`. The light one is
+/// kept building and tested, but nobody sees it, so weigh any claim it makes
+/// about "the app" accordingly.
 ///
-/// `fidelity` bám sát hạt giống ở các vai trò nhấn:
+/// Both schemes start from [brand] through the `fidelity` variant and then
+/// override most of what matters, because `fidelity` tracks the seed far too
+/// closely for a background:
 ///
-/// - `primary` `#A14000` — 6.5:1 với chữ trắng.
+/// - the `surface` family comes out tinted in both — see [_neutralSurfaces]
+///   for the light cream ramp and [_blackSurfaces] for the black one;
+/// - `primaryContainer` comes out as the raw seed — see
+///   [_tintedPrimaryContainer], which also swaps the dark scheme's accents to
+///   trustybot's blue.
 ///
-/// Đổi lại nó bão hoà quá tay ở hai chỗ, cả hai đều phải đặt lại bằng tay:
-///
-/// - họ `surface` bị ám cam theo — xem [_neutralSurfaces];
-/// - `primaryContainer` ra đúng `#FF6900` — xem [_tintedPrimaryContainer].
-///
-/// Cả hai đều chỉ hạ độ bão hoà của nền. Cam vẫn là màu nhận diện, chỉ còn ở
-/// những mảng nhỏ mà mắt không phải nhìn lâu.
+/// The rule that survived every revision: keep backgrounds quiet and let the
+/// accent carry the colour. Draining both leaves the app looking dead; tinting
+/// both makes every screen look stained.
 class AppTheme {
   const AppTheme._();
 
-  /// Cam chủ đạo — `oklch(0.705 0.213 47.604)`. Sắc đó nằm ngoài gamut sRGB một
-  /// chút; ép về gamut ra `#FF6900`, thực tế là `oklch(0.700 0.202 44.4)`.
+  /// Seed for the generated scheme — `oklch(0.705 0.213 47.604)`, just outside
+  /// sRGB; clamped into gamut it lands on `#FF6900`, really
+  /// `oklch(0.700 0.202 44.4)`.
   ///
-  /// Cố ý nằm ở dải màu ấm, để không đụng trustybot-frontend. Toàn bộ màu có
-  /// sắc của app kia nằm trong dải xanh dương–chàm–tím (hue 247°–291°):
+  /// This used to be the app's identity, picked warm specifically to stay clear
+  /// of trustybot, whose every chromatic colour sits in the blue–indigo–violet
+  /// band (hue 247°–291°). That constraint was dropped by request: the dark
+  /// scheme's accents are now taken straight from trustybot's own palette — see
+  /// [_tintedPrimaryContainer]. The two apps are meant to look related now.
   ///
-  /// - `primary-500 #5B9CD6` — "Brand blue. Default action color", khai trong
-  ///   `design-system/tokens.json`. Đây mới là nguồn có thẩm quyền.
-  /// - `--primary #4B74F6` trong `src/css/global.css`, cùng cả thang `--chart-*`.
-  /// - `tertiary-500 #6444B8` — accent tím, dùng thưa.
+  /// What the seed still does is narrower than it looks. Both schemes override
+  /// their surfaces by hand, and the dark one overrides `primary` and
+  /// `primaryContainer` too, so this really only drives the light scheme's
+  /// `primary` plus the `secondary` / `tertiary` / `error` roles that nothing
+  /// currently paints with. Changing it moves less than the name suggests.
   ///
-  /// Cam cách cả ba ít nhất ΔE 30 trên OKLab. Đừng đổi sang tông lạnh: bản tím
-  /// khói từng thử chỉ cách được nhiều nhất 18, và nhìn thực tế là ra ngay họ
-  /// hàng với app kia.
+  /// Do not switch to `tonalSpot`, the M3 default variant: with this seed it
+  /// wrings out most of the chroma and yields `#8E4D2E` for `primary`, the
+  /// exact brown the app used before it moved to orange.
   static const Color brand = Color(0xFFFF6900);
 
   static ThemeData light() => _build(
@@ -157,45 +163,50 @@ class AppTheme {
   /// not survive both backgrounds.
   ///
   /// On white, a pale tint is the signal and the text is only there to be
-  /// read. On black that inverts. A mid-dark brown fill — `#5C3620` was tried —
-  /// does not read as "tinted", it reads as a stain, and the debt overview card
-  /// is a large enough panel to make that obvious. So the dark fill only lifts
-  /// one step off the surface ramp and the orange moves into the foreground,
-  /// where it sits on a small area and stays sharp.
+  /// read. On black that inverts. A mid-dark fill does not read as "tinted",
+  /// it reads as a stain, and the debt overview card is a large enough panel to
+  /// make that obvious. So the dark fill only lifts one step off the surface
+  /// ramp and the accent moves into the foreground, where it sits on a small
+  /// area and stays sharp.
   ///
-  /// That leaves the dark fill nearly level with an unselected chip, 1.15:1, so
-  /// it is not carrying selection on its own. The orange label against the grey
+  /// That leaves the dark fill nearly level with an unselected chip, 1.14:1, so
+  /// it is not carrying selection on its own. The blue label against the grey
   /// one is, backed by w700 and the `outline` border — the same three cues the
   /// light scheme leans on.
   ///
-  /// Contrast against `onPrimaryContainer` is 7.51:1 light and 5.50:1 dark.
+  /// Contrast against `onPrimaryContainer` is 7.51:1 light and 4.93:1 dark.
   ///
-  /// The dark scheme also takes a hand-picked `primary`. M3 derives a pale
-  /// `#FFB694` for dark mode, which is the right call when the role has to work
-  /// as text, but `primary` is also the fill behind the FAB and every filled
-  /// button — and as a fill that pale orange looks washed out, not deliberate.
-  /// `#FF7A2F` is the same hue with the chroma left in.
+  /// ## Why the dark accents are blue
   ///
-  /// Its foreground has to be dark. White on a saturated orange tops out around
-  /// 3.5:1 whatever the shade, so a white label here would fail AA outright;
-  /// `#2B1000` gives 6.86:1. That is also why the light scheme keeps a deep
-  /// `primary` with white on top instead — the same trade, resolved the other
-  /// way round.
+  /// They are trustybot's, by request — `primary-500 #5B9CD6`, its declared
+  /// "Brand blue. Default action color". This reverses the reasoning kept on
+  /// [brand]; that note has been rewritten rather than left to contradict this
+  /// one.
   ///
-  /// Still safe as text: `#FF7A2F` reads 8.08:1 on the black surface, which is
-  /// what the app bar icons, the focused field border and the selected
-  /// navigation label rely on.
+  /// Picking the shade was forced. `primary` is both the fill behind the FAB
+  /// and filled buttons *and* a text colour for app bar icons, the focused
+  /// field border and the selected navigation label. Those two jobs pull in
+  /// opposite directions on black, and the scale cannot satisfy both:
+  ///
+  /// - `#2B5ED4` (650) carries white text at 5.75:1, but as a label on black it
+  ///   is 3.65:1 — under AA.
+  /// - `#5B9CD6` (500) reads 7.17:1 on black, but white on it is 2.93:1 — well
+  ///   under AA.
+  ///
+  /// So 500 for the role and a dark navy for its foreground: `#08172B` gives
+  /// 6.14:1 on the fill. Same trade the orange version made, same resolution.
+  /// A white button label is not available in this hue at any usable shade.
   static ColorScheme _tintedPrimaryContainer(ColorScheme scheme) =>
       scheme.brightness == Brightness.dark
       ? scheme.copyWith(
-          primary: const Color(0xFFFF7A2F),
-          onPrimary: const Color(0xFF2B1000),
-          primaryContainer: const Color(0xFF332822),
-          // Same orange as `primary`, on purpose. The navigation label takes
+          primary: const Color(0xFF5B9CD6),
+          onPrimary: const Color(0xFF08172B),
+          primaryContainer: const Color(0xFF202A3A),
+          // Same blue as `primary`, on purpose. The navigation label takes
           // `primary` while a chip label takes this one, and two different
-          // oranges for the one meaning — "selected" — reads as a mistake.
-          // 5.50:1 on the container, so the chip label clears AA.
-          onPrimaryContainer: const Color(0xFFFF7A2F),
+          // blues for the one meaning — "selected" — reads as a mistake.
+          // 4.93:1 on the container, so the chip label clears AA.
+          onPrimaryContainer: const Color(0xFF5B9CD6),
         )
       : scheme.copyWith(
           primaryContainer: const Color(0xFFFFDFC9),
