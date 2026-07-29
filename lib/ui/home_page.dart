@@ -37,6 +37,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final _controller = HomeController();
   final _query = TextEditingController();
 
+  /// Ô tìm kiếm chỉ hiện khi được gọi. Nó nằm trên thanh tiêu đề thay cho tên
+  /// app: để nó thường trực giữa màn thì mất một dòng cho thứ hiếm khi dùng.
+  bool _searching = false;
+
   @override
   void initState() {
     super.initState();
@@ -89,9 +93,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _openPage(const DigestPage());
   }
 
-  Future<void> _openPage(Widget page) => Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => page),
-  );
+  Future<void> _openPage(Widget page) =>
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
 
   /// Mở lịch cho một đầu của khoảng ngày, đầu kia giữ nguyên — chọn mỗi "Từ
   /// ngày" là ra "từ hôm đó đến nay".
@@ -108,9 +111,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  void _clearQuery() {
-    _query.clear();
-    _controller.queryChanged('');
+  /// Mở ô tìm kiếm, hoặc đóng nó lại và bỏ luôn từ khoá — đóng mà vẫn còn lọc
+  /// thì danh sách thiếu giao dịch mà không còn gì trên màn giải thích tại sao.
+  void _toggleSearch() {
+    setState(() => _searching = !_searching);
+    if (!_searching) {
+      _query.clear();
+      _controller.queryChanged('');
+    }
   }
 
   /// Số dư trên thẻ lệch với thực tế -> mở sheet nhập số đúng. Không cần tự
@@ -133,130 +141,190 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     return ListenableBuilder(
       listenable: _controller,
       builder: (context, _) => Scaffold(
-      appBar: AppBar(
-        title: const Text('Ting Ting'),
-        actions: [
-          IconButton(
-            tooltip: 'Lọc nâng cao',
-            icon: const Icon(Icons.tune_rounded),
-            onPressed: () => _openPage(const SearchPage()),
-          ),
-          PopupMenuButton<String>(
-            tooltip: 'Cài đặt',
-            icon: const Icon(Icons.more_vert_rounded),
-            onSelected: (value) => switch (value) {
-              'digest' => _openPage(const DigestPage()),
-              'audit' => _openPage(const LedgerAuditPage()),
-              'backup' => _openPage(const BackupPage()),
-              'sources' => _openPage(const SourcesPage()),
-              'categories' => _openPage(const CategoriesPage()),
-              'rules' => _openPage(const RulesPage()),
-              _ => _openPage(const RawLogPage()),
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                value: 'digest',
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.insights_rounded),
-                  title: Text('Nhìn lại'),
-                ),
+        appBar: AppBar(
+          title: _searching
+              ? TextField(
+                  controller: _query,
+                  autofocus: true,
+                  textInputAction: TextInputAction.search,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  decoration: const InputDecoration(
+                    hintText: 'Tìm nội dung, ghi chú...',
+                    filled: false,
+                    isDense: true,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                  ),
+                  onChanged: _controller.queryChanged,
+                )
+              : const Text('Ting Ting'),
+          actions: [
+            IconButton(
+              tooltip: _searching ? 'Đóng tìm kiếm' : 'Tìm kiếm',
+              icon: Icon(
+                _searching ? Icons.close_rounded : Icons.search_rounded,
               ),
-              PopupMenuItem(
-                value: 'audit',
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.fact_check_outlined),
-                  title: Text('Kiểm sổ'),
-                ),
-              ),
-              PopupMenuItem(
-                value: 'sources',
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.account_balance_outlined),
-                  title: Text('Nguồn ngân hàng'),
-                ),
-              ),
-              PopupMenuItem(
-                value: 'categories',
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.category_outlined),
-                  title: Text('Nhóm chi tiêu'),
-                ),
-              ),
-              PopupMenuItem(
-                value: 'rules',
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.rule_rounded),
-                  title: Text('Quy tắc phân loại'),
-                ),
-              ),
-              PopupMenuItem(
-                value: 'backup',
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.backup_outlined),
-                  title: Text('Sao lưu'),
-                ),
-              ),
-              PopupMenuItem(
-                value: 'log',
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.notifications_none_rounded),
-                  title: Text('Nhật ký thông báo'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        tooltip: 'Thêm giao dịch',
-        onPressed: () => _openPage(const AddTxnPage()),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Thêm'),
-      ),
-      body: RefreshIndicator(
-        onRefresh: _controller.refresh,
-        child: ListView(
-          padding: const EdgeInsets.only(bottom: 88),
-          children: [
-            if (!_controller.platformSupported)
-              const _UnsupportedPlatformBanner(),
-            if (_controller.needsPermission)
-              _PermissionBanner(onGrant: _controller.requestPermission),
-            _BalanceCard(
-              wallets: _controller.wallets,
-              onEdit: _editBalance,
+              onPressed: _toggleSearch,
             ),
-            _FilterBar(
-              controller: _controller,
-              queryController: _query,
-              onClearQuery: _clearQuery,
-              onPickStart: () => _pickDate(isStart: true),
-              onPickEnd: () => _pickDate(isStart: false),
-            ),
-            _SummaryCard(totals: _controller.totals),
-            if (_controller.loading)
-              const Padding(
-                padding: EdgeInsets.all(48),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (!_controller.hasTxns)
-              _EmptyState(filtering: _controller.hasFilter)
-            else
-              for (final day in _controller.days) ...[
-                _DayHeader(day: day.day, total: day.net),
-                for (final txn in day.txns)
-                  _TxnTile(txn: txn, onTap: () => _openTxnSheet(txn)),
+            PopupMenuButton<String>(
+              tooltip: 'Cài đặt',
+              icon: const Icon(Icons.more_vert_rounded),
+              onSelected: (value) => switch (value) {
+                'search' => _openPage(const SearchPage()),
+                'digest' => _openPage(const DigestPage()),
+                'audit' => _openPage(const LedgerAuditPage()),
+                'backup' => _openPage(const BackupPage()),
+                'sources' => _openPage(const SourcesPage()),
+                'categories' => _openPage(const CategoriesPage()),
+                'rules' => _openPage(const RulesPage()),
+                _ => _openPage(const RawLogPage()),
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'search',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.tune_rounded),
+                    title: Text('Lọc nâng cao'),
+                  ),
+                ),
+                PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'digest',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.insights_rounded),
+                    title: Text('Nhìn lại'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'audit',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.fact_check_outlined),
+                    title: Text('Kiểm sổ'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'sources',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.account_balance_outlined),
+                    title: Text('Nguồn ngân hàng'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'categories',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.category_outlined),
+                    title: Text('Nhóm chi tiêu'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'rules',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.rule_rounded),
+                    title: Text('Quy tắc phân loại'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'backup',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.backup_outlined),
+                    title: Text('Sao lưu'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'log',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.notifications_none_rounded),
+                    title: Text('Nhật ký thông báo'),
+                  ),
+                ),
               ],
+            ),
           ],
         ),
-      ),
+        floatingActionButton: FloatingActionButton.extended(
+          tooltip: 'Thêm giao dịch',
+          onPressed: () => _openPage(const AddTxnPage()),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Thêm'),
+        ),
+        body: RefreshIndicator(
+          onRefresh: _controller.refresh,
+          child: CustomScrollView(
+            // Kéo xuống để nạp lại phải chạy cả khi danh sách ngắn hơn màn hình.
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (!_controller.platformSupported)
+                      const _UnsupportedPlatformBanner(),
+                    if (_controller.needsPermission)
+                      _PermissionBanner(onGrant: _controller.requestPermission),
+                    _OverviewCard(
+                      wallets: _controller.wallets,
+                      totals: _controller.totals,
+                      rangeLabel: _rangeLabel(_controller),
+                      onEdit: _editBalance,
+                    ),
+                    _FilterBar(
+                      controller: _controller,
+                      onPickStart: () => _pickDate(isStart: true),
+                      onPickEnd: () => _pickDate(isStart: false),
+                    ),
+                  ],
+                ),
+              ),
+              if (_controller.loading)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(48),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                )
+              else if (!_controller.hasTxns)
+                SliverToBoxAdapter(
+                  child: _EmptyState(filtering: _controller.hasFilter),
+                )
+              else
+                // Mỗi ngày là một nhóm riêng để tiêu đề ngày dính lại trên đỉnh
+                // trong lúc cuộn: danh sách dài thì luôn biết đang xem ngày nào.
+                for (final day in _controller.days)
+                  SliverMainAxisGroup(
+                    slivers: [
+                      SliverPersistentHeader(
+                        pinned: true,
+                        delegate: _DayHeaderDelegate(
+                          day: day.day,
+                          total: day.net,
+                        ),
+                      ),
+                      SliverList.builder(
+                        itemCount: day.txns.length,
+                        itemBuilder: (_, index) {
+                          final txn = day.txns[index];
+                          return _TxnTile(
+                            txn: txn,
+                            onTap: () => _openTxnSheet(txn),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+              // Chừa chỗ cho nút "Thêm" khỏi che dòng cuối.
+              const SliverToBoxAdapter(child: SizedBox(height: 96)),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -269,80 +337,101 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   );
 }
 
-/// Ô tìm kiếm + khoảng ngày + mấy chip khoảng dựng sẵn.
-///
-/// Thay cho nút lùi/tiến tháng cũ: xem tháng nào vẫn chỉ một cú bấm ("Tháng
-/// này" / "Tháng trước"), nhưng giờ chọn được khoảng bất kỳ và lọc theo chữ.
-class _FilterBar extends StatelessWidget {
+/// Nhãn ngắn cho khoảng đang lọc: tên chip dựng sẵn nếu khớp, không thì hai đầu
+/// ngày rút gọn.
+String _rangeLabel(HomeController controller) {
+  final preset = controller.activePreset;
+  if (preset != null) return preset.label;
+  final from = controller.from;
+  final to = controller.to;
+  if (from == null && to == null) return DateFilterPreset.all.label;
+  if (from == null) return 'Đến ${formatDayShort(to!)}';
+  if (to == null) return 'Từ ${formatDayShort(from)}';
+  return '${formatDayShort(from)} – ${formatDayShort(to)}';
+}
+
+/// Một hàng chip khoảng ngày. Lịch chọn tay nằm sau chip cuối cùng chứ không
+/// bày sẵn: chín phần mười lượt xem rơi vào một trong bốn khoảng dựng sẵn, để
+/// hai nút lịch thường trực là mất một dòng cho phần thiểu số.
+class _FilterBar extends StatefulWidget {
   const _FilterBar({
     required this.controller,
-    required this.queryController,
-    required this.onClearQuery,
     required this.onPickStart,
     required this.onPickEnd,
   });
 
   final HomeController controller;
-  final TextEditingController queryController;
-  final VoidCallback onClearQuery;
   final VoidCallback onPickStart;
   final VoidCallback onPickEnd;
 
   @override
+  State<_FilterBar> createState() => _FilterBarState();
+}
+
+class _FilterBarState extends State<_FilterBar> {
+  bool _showCalendar = false;
+
+  @override
   Widget build(BuildContext context) {
+    final controller = widget.controller;
     final active = controller.activePreset;
+    // Khoảng do user tự chọn thì không chip nào sáng lên được — mở sẵn lịch ra
+    // để nhãn "01/07 – 15/07" có chỗ bấm mà sửa.
+    final custom = active == null && controller.hasDateFilter;
+    final open = _showCalendar || custom;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-          child: TextField(
-            controller: queryController,
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: 'Tìm nội dung, ghi chú...',
-              prefixIcon: const Icon(Icons.search_rounded, size: 20),
-              suffixIcon: controller.query.isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: 'Xoá từ khoá',
-                      icon: const Icon(Icons.close_rounded, size: 20),
-                      onPressed: onClearQuery,
-                    ),
-              border: const OutlineInputBorder(),
-            ),
-            onChanged: controller.queryChanged,
-          ),
-        ),
-        DateRangeBar(
-          from: controller.from,
-          to: controller.to,
-          onPickStart: onPickStart,
-          onPickEnd: onPickEnd,
-          onClear: controller.hasDateFilter ? controller.clearDateRange : null,
-          padding: const EdgeInsets.fromLTRB(16, 8, 4, 0),
-        ),
         SizedBox(
-          height: 46,
+          height: 44,
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             children: [
               for (final preset in DateFilterPreset.values)
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 6,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: ChoiceChip(
                     label: Text(preset.label),
                     selected: active == preset,
-                    onSelected: (_) => controller.applyPreset(preset),
+                    onSelected: (_) {
+                      setState(() => _showCalendar = false);
+                      controller.applyPreset(preset);
+                    },
                   ),
                 ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: ChoiceChip(
+                  avatar: const Icon(Icons.event_rounded, size: 18),
+                  label: Text(custom ? _rangeLabel(controller) : 'Chọn ngày'),
+                  selected: custom,
+                  onSelected: (_) =>
+                      setState(() => _showCalendar = !_showCalendar),
+                ),
+              ),
             ],
           ),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          alignment: Alignment.topCenter,
+          child: open
+              ? DateRangeBar(
+                  from: controller.from,
+                  to: controller.to,
+                  onPickStart: widget.onPickStart,
+                  onPickEnd: widget.onPickEnd,
+                  onClear: controller.hasDateFilter
+                      ? () {
+                          setState(() => _showCalendar = false);
+                          controller.clearDateRange();
+                        }
+                      : null,
+                  padding: const EdgeInsets.fromLTRB(16, 4, 4, 0),
+                )
+              : const SizedBox(width: double.infinity),
         ),
       ],
     );
@@ -357,356 +446,160 @@ typedef EditBalanceRequest =
       String? walletName,
     });
 
-/// Số dư hiện có, tách theo hai ví. Thẻ nổi bật nhất màn hình nên tô nền cam
-/// nhạt — nhìn phát thấy ngay tổng tiền đang có.
-class _BalanceCard extends StatelessWidget {
-  const _BalanceCard({required this.wallets, required this.onEdit});
+/// Thẻ tóm tắt duy nhất của màn hình: tiền đang có ở trên, thu chi của khoảng
+/// đang lọc ở dưới.
+///
+/// Trước đây là hai thẻ rời chiếm gần nửa màn hình trước khi thấy giao dịch đầu
+/// tiên. Gộp lại còn một thẻ, và phần chia theo từng ngân hàng — thứ chỉ cần
+/// khi muốn sửa số dư — giấu sau một nút bung.
+class _OverviewCard extends StatefulWidget {
+  const _OverviewCard({
+    required this.wallets,
+    required this.totals,
+    required this.rangeLabel,
+    required this.onEdit,
+  });
 
   final WalletBalances wallets;
+  final TxnTotals totals;
+  final String rangeLabel;
   final EditBalanceRequest onEdit;
 
-  /// Tổng của nhiều ngân hàng thì không sửa thẳng được — phải chọn đúng ví ở
-  /// danh sách bên dưới. Chưa có ngân hàng nào thì bấm vào để khai ví đầu tiên.
-  VoidCallback? _editBankTotal(List<BankBalance> banks) => switch (banks) {
-    [] => () => onEdit(accountKind: AccountKind.bank, current: 0),
-    [final only] => () => onEdit(
-      accountKind: AccountKind.bank,
-      current: only.balance,
-      walletName: only.bankName,
-    ),
-    _ => null,
-  };
+  @override
+  State<_OverviewCard> createState() => _OverviewCardState();
+}
+
+class _OverviewCardState extends State<_OverviewCard> {
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final palette = ChartPalette.of(context);
-    final banks = wallets.banks;
+    final wallets = widget.wallets;
+    final total = wallets.bankTotal + wallets.cash;
+    final net = widget.totals.net;
     return Card(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      color: scheme.primaryContainer,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: scheme.primary.withValues(alpha: 0.25)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _WalletCell(
-                    icon: Icons.account_balance_wallet_rounded,
-                    label: 'Tài khoản',
-                    value: wallets.hasBankData
-                        ? formatMoney(wallets.bankTotal)
-                        : '—',
-                    color: scheme.onPrimaryContainer,
-                    onTap: _editBankTotal(banks),
-                  ),
-                ),
-                Container(
-                  width: 1,
-                  height: 44,
-                  color: scheme.onPrimaryContainer.withValues(alpha: 0.18),
-                ),
-                Expanded(
-                  child: _WalletCell(
-                    icon: Icons.payments_rounded,
-                    label: 'Tiền mặt',
-                    value: formatMoney(wallets.cash),
-                    color: wallets.cash < 0
-                        ? palette.expenseText
-                        : scheme.onPrimaryContainer,
-                    onTap: () => onEdit(
-                      accountKind: AccountKind.cash,
-                      current: wallets.cash,
-                      walletName: AccountKind.cash.label,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (banks.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Divider(
-                height: 1,
-                color: scheme.onPrimaryContainer.withValues(alpha: 0.18),
-              ),
-              const SizedBox(height: 10),
-              for (final bank in banks)
-                InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: () => onEdit(
-                    accountKind: AccountKind.bank,
-                    current: bank.balance,
-                    walletName: bank.bankName,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 5),
-                    child: Row(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 8, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.account_balance_outlined,
-                          size: 16,
-                          color: scheme.onPrimaryContainer,
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.account_balance_wallet_rounded,
+                              size: 16,
+                              color: scheme.primary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Tổng tiền',
+                              style: theme.textTheme.labelMedium,
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
+                        const SizedBox(height: 4),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
                           child: Text(
-                            bank.bankName,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: scheme.onPrimaryContainer,
+                            formatMoney(total),
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              color: total < 0
+                                  ? palette.expenseText
+                                  : scheme.onSurface,
                             ),
                           ),
                         ),
+                        const SizedBox(height: 3),
                         Text(
-                          '${formatMoney(bank.balance)} · ${formatDay(bank.at)}',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: scheme.onPrimaryContainer,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Icon(
-                          Icons.edit_rounded,
-                          size: 13,
-                          color: scheme.onPrimaryContainer.withValues(
-                            alpha: 0.6,
-                          ),
+                          'Tài khoản '
+                          '${wallets.hasBankData ? formatMoney(wallets.bankTotal) : '—'}'
+                          '  ·  Tiền mặt ${formatMoney(wallets.cash)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall,
                         ),
                       ],
                     ),
                   ),
-                ),
-              const SizedBox(height: 6),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Một ví trong thẻ số dư: icon + nhãn nhỏ + số tiền cỡ lớn.
-///
-/// [onTap] khác `null` thì cả ô bấm được để sửa số dư, và có thêm cây bút nhỏ
-/// cạnh nhãn — không có nó thì không ai đoán ra là bấm được.
-class _WalletCell extends StatelessWidget {
-  const _WalletCell({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 18, color: color),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    label,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelMedium?.copyWith(color: color),
-                  ),
-                ),
-                if (onTap != null) ...[
-                  const SizedBox(width: 4),
-                  Icon(
-                    Icons.edit_rounded,
-                    size: 13,
-                    color: color.withValues(alpha: 0.6),
+                  AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 180),
+                    child: Icon(
+                      Icons.expand_more_rounded,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
-              ],
-            ),
-            const SizedBox(height: 6),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                value,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.totals});
-
-  final TxnTotals totals;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = ChartPalette.of(context);
-    final net = totals.net;
-    return Card(
-      margin: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            alignment: Alignment.topCenter,
+            child: _expanded
+                ? _WalletDetails(wallets: wallets, onEdit: widget.onEdit)
+                : const SizedBox(width: double.infinity),
+          ),
+          Divider(
+            height: 1,
+            indent: 16,
+            endIndent: 16,
+            color: scheme.outlineVariant,
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 13),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: _SummaryCell(
-                    icon: Icons.south_west_rounded,
-                    label: 'Thu',
-                    value: formatMoney(totals.income),
-                    color: palette.incomeText,
-                  ),
-                ),
-                Expanded(
-                  child: _SummaryCell(
-                    icon: Icons.north_east_rounded,
-                    label: 'Chi',
-                    value: formatMoney(totals.expense),
-                    color: palette.expenseText,
-                  ),
+                Text(widget.rangeLabel, style: theme.textTheme.labelMedium),
+                const SizedBox(height: 6),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _FlowCell(
+                        icon: Icons.south_west_rounded,
+                        label: 'Thu',
+                        value: formatMoney(widget.totals.income),
+                        color: palette.incomeText,
+                      ),
+                    ),
+                    Expanded(
+                      child: _FlowCell(
+                        icon: Icons.north_east_rounded,
+                        label: 'Chi',
+                        value: formatMoney(widget.totals.expense),
+                        color: palette.expenseText,
+                      ),
+                    ),
+                    Expanded(
+                      child: _FlowCell(
+                        label: 'Còn lại',
+                        value: formatSigned(net.abs(), isIncome: net >= 0),
+                        color: net >= 0
+                            ? palette.incomeText
+                            : palette.expenseText,
+                        alignEnd: true,
+                      ),
+                    ),
+                  ],
                 ),
               ],
-            ),
-            const Divider(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Còn lại',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                Text(
-                  formatSigned(net.abs(), isIncome: net >= 0),
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: net >= 0 ? palette.incomeText : palette.expenseText,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Ô "Thu" / "Chi": icon tròn có nền nhạt cùng màu với con số, để phân biệt
-/// hai ô mà không phải đọc nhãn.
-class _SummaryCell extends StatelessWidget {
-  const _SummaryCell({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.14),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, size: 20, color: color),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: theme.textTheme.labelMedium),
-              const SizedBox(height: 2),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  value,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DayHeader extends StatelessWidget {
-  const _DayHeader({required this.day, required this.total});
-
-  final DateTime day;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      color: theme.colorScheme.surfaceContainerHigh,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      margin: const EdgeInsets.only(top: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            formatDayHeader(day),
-            style: theme.textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          Text(
-            formatSigned(total.abs(), isIncome: total >= 0),
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -715,7 +608,263 @@ class _DayHeader extends StatelessWidget {
   }
 }
 
+/// Phần bung ra của thẻ tóm tắt: mỗi ví một dòng, bấm vào để sửa số dư.
+class _WalletDetails extends StatelessWidget {
+  const _WalletDetails({required this.wallets, required this.onEdit});
+
+  final WalletBalances wallets;
+  final EditBalanceRequest onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ChartPalette.of(context);
+    final banks = wallets.banks;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Divider(height: 1, indent: 16, endIndent: 16),
+        const SizedBox(height: 4),
+        // Chưa bắt được ngân hàng nào thì vẫn phải có một dòng bấm vào được,
+        // không thì không có đường nào khai số dư ban đầu.
+        if (banks.isEmpty)
+          _WalletRow(
+            icon: Icons.account_balance_outlined,
+            name: 'Tài khoản',
+            value: '—',
+            onTap: () => onEdit(accountKind: AccountKind.bank, current: 0),
+          )
+        else
+          for (final bank in banks)
+            _WalletRow(
+              icon: Icons.account_balance_outlined,
+              name: bank.bankName,
+              hint: 'ghi nhận ${formatDayShort(bank.at)}',
+              value: formatMoney(bank.balance),
+              onTap: () => onEdit(
+                accountKind: AccountKind.bank,
+                current: bank.balance,
+                walletName: bank.bankName,
+              ),
+            ),
+        _WalletRow(
+          icon: Icons.payments_outlined,
+          name: AccountKind.cash.label,
+          value: formatMoney(wallets.cash),
+          valueColor: wallets.cash < 0 ? palette.expenseText : null,
+          onTap: () => onEdit(
+            accountKind: AccountKind.cash,
+            current: wallets.cash,
+            walletName: AccountKind.cash.label,
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+/// Một dòng ví: icon, tên (kèm ngày ghi nhận nếu có), số dư và cây bút nhỏ báo
+/// hiệu bấm được.
+class _WalletRow extends StatelessWidget {
+  const _WalletRow({
+    required this.icon,
+    required this.name,
+    required this.value,
+    required this.onTap,
+    this.hint,
+    this.valueColor,
+  });
+
+  final IconData icon;
+  final String name;
+  final String value;
+  final String? hint;
+  final Color? valueColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: scheme.onSurfaceVariant),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (hint != null)
+                    Text(hint!, style: theme.textTheme.bodySmall),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 150),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  value,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: valueColor ?? scheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(Icons.edit_rounded, size: 14, color: scheme.outline),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Một con số trong dải "Thu / Chi / Còn lại": nhãn nhỏ kèm mũi tên hướng tiền,
+/// số tiền tô màu ngay bên dưới.
+///
+/// Bỏ huy hiệu tròn 38px của bản cũ — ba khối màu cạnh nhau trên cùng một dải
+/// hút mắt mạnh hơn cả số tiền mà chúng đứng cạnh.
+class _FlowCell extends StatelessWidget {
+  const _FlowCell({
+    required this.label,
+    required this.value,
+    required this.color,
+    this.icon,
+    this.alignEnd = false,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+  final IconData? icon;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: alignEnd
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
+      children: [
+        // Nhãn cũng phải co được như con số: ba ô chia đều một thẻ hẹp, và
+        // "Còn lại" đã sát mép khi user phóng to cỡ chữ hệ thống.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 13, color: color),
+                const SizedBox(width: 3),
+              ],
+              Text(label, style: theme.textTheme.labelMedium),
+            ],
+          ),
+        ),
+        const SizedBox(height: 2),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+          child: Text(
+            value,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Tiêu đề ngày dính trên đỉnh danh sách khi cuộn.
+///
+/// Nền phải đục và đúng bằng màu nền màn hình: lúc dính lại, giao dịch chạy
+/// ngay bên dưới nó.
+class _DayHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _DayHeaderDelegate({required this.day, required this.total});
+
+  final DateTime day;
+  final int total;
+
+  static const double _height = 34;
+
+  @override
+  double get minExtent => _height;
+
+  @override
+  double get maxExtent => _height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlaps) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Container(
+      height: _height,
+      color: scheme.surface,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      alignment: Alignment.center,
+      // "Thứ Ba, 28/07/2026" cạnh một tổng ngày hàng trăm triệu là vừa đủ tràn
+      // một màn hẹp — nhãn ngày cắt bớt, con số thu nhỏ lại.
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              formatDayHeader(day),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 160),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(
+                formatSigned(total.abs(), isIncome: total >= 0),
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_DayHeaderDelegate old) => true;
+}
+
 /// Một dòng giao dịch. Dùng chung giữa màn chính và màn tìm kiếm.
+///
+/// Tự dựng bằng [Row] thay vì [ListTile]: dòng này lặp lại hàng trăm lần trong
+/// một lần cuộn, nên khoảng đệm rộng rãi của [ListTile] (76px một dòng) làm màn
+/// hình chỉ chứa nổi bảy tám giao dịch. Bản này cao khoảng 56px.
 class _TxnTile extends StatelessWidget {
   const _TxnTile({required this.txn, required this.onTap});
 
@@ -731,65 +880,101 @@ class _TxnTile extends StatelessWidget {
     final amountColor = muted
         ? theme.colorScheme.outline
         : (isIncome ? palette.incomeText : palette.expenseText);
-    return ListTile(
+    // Giờ đứng trước: trong một nhóm ngày thì ngân hàng nào hay lặp lại, còn
+    // giờ mới là thứ dùng để định vị giao dịch.
+    final meta = [
+      formatTime(txn.postTime),
+      txn.bankName,
+      if (txn.isDebt)
+        '${txn.debtType!.label}${txn.person != null ? ' · ${txn.person}' : ''}',
+      if (txn.isTransfer) 'chuyển ví',
+      if (txn.excluded) 'không tính',
+    ].join(' · ');
+    return InkWell(
       onTap: onTap,
-      // Icon tô nền nhạt cùng màu với số tiền: liếc qua là biết tiền vào hay ra
-      // mà không cần đọc dấu +/−.
-      leading: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: amountColor.withValues(alpha: 0.14),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          txn.isDebt
-              ? Icons.volunteer_activism_rounded
-              : txn.isTransfer
-              ? Icons.swap_horiz_rounded
-              : (isIncome
-                    ? Icons.south_west_rounded
-                    : Icons.north_east_rounded),
-          color: amountColor,
-          size: 22,
-        ),
-      ),
-      title: Text(
-        txn.description?.isNotEmpty == true ? txn.description! : txn.category,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Row(
-        children: [
-          Flexible(
-            child: Text(
-              [
-                txn.bankName,
-                formatTime(txn.postTime),
-                if (txn.isDebt) '${txn.debtType!.label}${txn.person != null ? ' · ${txn.person}' : ''}',
-                if (txn.isTransfer) 'chuyển ví',
-                if (txn.excluded) 'không tính',
-              ].join(' · '),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 9, 16, 9),
+        child: Row(
+          children: [
+            // Icon tô nền nhạt cùng màu với số tiền: liếc qua là biết tiền vào
+            // hay ra mà không cần đọc dấu +/−.
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: amountColor.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                txn.isDebt
+                    ? Icons.volunteer_activism_rounded
+                    : txn.isTransfer
+                    ? Icons.swap_horiz_rounded
+                    : (isIncome
+                          ? Icons.south_west_rounded
+                          : Icons.north_east_rounded),
+                color: amountColor,
+                size: 18,
+              ),
             ),
-          ),
-          if (txn.needsReview || txn.needsPerson) ...[
-            const SizedBox(width: 6),
-            Icon(
-              Icons.error_outline_rounded,
-              size: 15,
-              color: theme.colorScheme.tertiary,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    txn.description?.isNotEmpty == true
+                        ? txn.description!
+                        : txn.category,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          meta,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
+                      if (txn.needsReview || txn.needsPerson) ...[
+                        const SizedBox(width: 5),
+                        Icon(
+                          Icons.error_outline_rounded,
+                          size: 14,
+                          color: theme.colorScheme.tertiary,
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            // Số tiền dài (hàng trăm triệu) không được đẩy tên giao dịch co lại
+            // tới mức không đọc nổi — chặn bề ngang rồi thu nhỏ chữ nếu cần.
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 132),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  formatSigned(txn.amount, isIncome: isIncome),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: amountColor,
+                    fontWeight: FontWeight.w700,
+                    decoration: muted ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+              ),
             ),
           ],
-        ],
-      ),
-      trailing: Text(
-        formatSigned(txn.amount, isIncome: isIncome),
-        style: theme.textTheme.titleSmall?.copyWith(
-          color: amountColor,
-          fontWeight: FontWeight.w700,
-          decoration: muted ? TextDecoration.lineThrough : null,
         ),
       ),
     );
