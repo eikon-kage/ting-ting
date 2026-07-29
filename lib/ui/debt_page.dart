@@ -71,9 +71,9 @@ class _DebtPageState extends State<DebtPage> {
                   color: theme.colorScheme.primaryContainer,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
-                    side: BorderSide(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.25),
-                    ),
+                    // Nền thẻ giờ là xám ấm chứ không còn cam, nên viền lấy
+                    // `outline`: `primary` mờ 25% trên nền xám ra vệt cam đục.
+                    side: BorderSide(color: theme.colorScheme.outline),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(18),
