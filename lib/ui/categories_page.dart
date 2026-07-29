@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import 'controllers/categories_controller.dart';
+import 'theme/chart_palette.dart';
 import 'widgets/empty_state.dart';
 
 /// Quản lý nhóm chi tiêu: thêm, sửa tên và từ khoá, xoá.
@@ -141,15 +142,35 @@ class _CategoriesPageState extends State<CategoriesPage> {
             itemCount: categories.length,
             separatorBuilder: (_, _) => const Divider(height: 1),
             itemBuilder: (_, i) =>
-                _tile(categories[i], _controller.countOf(categories[i])),
+                _tile(categories[i], _controller.countOf(categories[i]), i),
           );
         },
       ),
     );
   }
 
-  Widget _tile(Category category, int count) {
+  /// [rank] is the row's position in the list, which picks the avatar colour.
+  ///
+  /// Every avatar used to be the same `primaryContainer` circle, so a list of
+  /// twenty groups read as one column of identical dots and nothing could be
+  /// found by sight. [ChartPalette] is borrowed because its six colours are
+  /// already checked to stay apart for colour-blind readers — the property that
+  /// matters when the dots sit one above another.
+  ///
+  /// Cycled with `%`, so the seventh group starts the palette over instead of
+  /// falling into the grey "Khác" slot. Grey there would read as a real
+  /// category state rather than as running out of colours.
+  ///
+  /// Deliberately does *not* line up with the report chart. That chart colours
+  /// by rank of spend within the period, so a group's slice colour moves as
+  /// spending moves; there is no stable per-category colour to match. This is
+  /// decoration for scanning the list, nothing more — do not build meaning on
+  /// it, and if the chart ever gains stable category colours, drop this in
+  /// favour of them.
+  Widget _tile(Category category, int count, int rank) {
     final theme = Theme.of(context);
+    final palette = ChartPalette.of(context);
+    final color = palette.series(rank % palette.maxSlots);
     final keywords = category.keywords.isEmpty
         ? 'Chưa có từ khoá tự nhận'
         : category.keywords.take(4).join(', ') +
@@ -159,11 +180,11 @@ class _CategoriesPageState extends State<CategoriesPage> {
     return ListTile(
       onTap: () => _edit(category),
       leading: CircleAvatar(
-        backgroundColor: theme.colorScheme.primaryContainer,
+        backgroundColor: color.withValues(alpha: 0.14),
         child: Icon(
           category.builtIn ? Icons.lock_outline_rounded : Icons.label_outline,
           size: 20,
-          color: theme.colorScheme.onPrimaryContainer,
+          color: color,
         ),
       ),
       title: Text(category.name),

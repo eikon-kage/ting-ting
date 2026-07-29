@@ -10,10 +10,11 @@ import 'package:flutter/material.dart';
 /// `fidelity` bám sát hạt giống ở các vai trò nhấn:
 ///
 /// - `primary` `#A14000` — 6.5:1 với chữ trắng.
+///
 /// Đổi lại nó bão hoà quá tay ở hai chỗ, cả hai đều phải đặt lại bằng tay:
 ///
 /// - họ `surface` bị ám cam theo — xem [_neutralSurfaces];
-/// - `primaryContainer` ra đúng `#FF6900` — xem [_mutedPrimaryContainer].
+/// - `primaryContainer` ra đúng `#FF6900` — xem [_tintedPrimaryContainer].
 ///
 /// Cả hai đều chỉ hạ độ bão hoà của nền. Cam vẫn là màu nhận diện, chỉ còn ở
 /// những mảng nhỏ mà mắt không phải nhìn lâu.
@@ -37,7 +38,7 @@ class AppTheme {
   static const Color brand = Color(0xFFFF6900);
 
   static ThemeData light() => _build(
-    _mutedPrimaryContainer(
+    _tintedPrimaryContainer(
       _neutralSurfaces(
         ColorScheme.fromSeed(
           seedColor: brand,
@@ -47,36 +48,41 @@ class AppTheme {
     ),
   );
 
-  /// Thay họ `surface` của bảng sáng bằng thang gần như trung tính.
+  /// Replaces the light scheme's `surface` family with a warm cream ramp.
   ///
-  /// `fidelity` sinh nền ám cam khá nặng: `surfaceContainerHigh` ra `#FEE3D8`,
-  /// tức hồng đào thấy rõ — mà đúng vai trò đó lát nền cho chip, ô nhập, thanh
-  /// điều hướng và mọi khối phụ, nên cả màn hình như bị phủ một lớp cam. Thang
-  /// dưới đây giữ nguyên thứ tự đậm dần, chỉ còn chút hơi ấm (chênh lệch giữa
-  /// kênh đỏ và kênh lam còn 3–4/255 thay vì 30–40) để không lạnh hẳn sang xám
-  /// xanh.
+  /// `fidelity` tints the neutrals heavily: `surfaceContainerHigh` comes out
+  /// `#FEE3D8`, a visible peach, and that role backs the chips, text fields,
+  /// navigation bar and every secondary block — so the whole screen read as if
+  /// a sheet of orange had been laid over it.
   ///
-  /// Chỉ đụng vào nền và chữ trên nền; `primary` vẫn lấy từ hạt giống.
+  /// The measure that matters here is how far the red channel runs ahead of
+  /// blue. `fidelity` puts it at 38/255, which is the peach. A first pass cut
+  /// it to 3–5, which killed the tint but left large areas — cards, banners,
+  /// the overview panel — reading as flat grey, and the app looked drained.
+  /// This ramp sits at 6–17: clearly warm, nowhere near peach.
   ///
-  /// Tương phản trên nền mới: `onSurface` 16:1, `onSurfaceVariant` 7.7:1 (còn
-  /// 6.4:1 khi nằm trên `surfaceContainerHighest`) — đều vượt AA.
+  /// Only backgrounds and the text on them; `primary` still comes from the
+  /// seed.
+  ///
+  /// Contrast on the new ramp: `onSurface` 16.26:1, `onSurfaceVariant` 7.72:1,
+  /// dropping to 6.33:1 on `surfaceContainerHighest` — all clear of AA.
   static ColorScheme _neutralSurfaces(ColorScheme scheme) => scheme.copyWith(
-    surface: const Color(0xFFFDFBFA),
-    surfaceBright: const Color(0xFFFDFBFA),
-    surfaceDim: const Color(0xFFEDE9E7),
+    surface: const Color(0xFFFFFCF9),
+    surfaceBright: const Color(0xFFFFFCF9),
+    surfaceDim: const Color(0xFFF0E9E2),
     surfaceContainerLowest: const Color(0xFFFFFFFF),
-    surfaceContainerLow: const Color(0xFFFAF7F6),
-    surfaceContainer: const Color(0xFFF5F2F0),
-    surfaceContainerHigh: const Color(0xFFEFECEA),
-    surfaceContainerHighest: const Color(0xFFEAE6E4),
-    onSurface: const Color(0xFF221D1B),
-    onSurfaceVariant: const Color(0xFF56504D),
-    outline: const Color(0xFF857D79),
-    outlineVariant: const Color(0xFFE0DBD8),
+    surfaceContainerLow: const Color(0xFFFDF8F3),
+    surfaceContainer: const Color(0xFFF8F2EB),
+    surfaceContainerHigh: const Color(0xFFF3ECE4),
+    surfaceContainerHighest: const Color(0xFFEDE5DC),
+    onSurface: const Color(0xFF241D17),
+    onSurfaceVariant: const Color(0xFF58504A),
+    outline: const Color(0xFF8A8079),
+    outlineVariant: const Color(0xFFE4DBD1),
   );
 
   static ThemeData dark() => _build(
-    _mutedPrimaryContainer(
+    _tintedPrimaryContainer(
       ColorScheme.fromSeed(
         seedColor: brand,
         brightness: Brightness.dark,
@@ -85,34 +91,36 @@ class AppTheme {
     ),
   );
 
-  /// Hạ `primaryContainer` từ cam đặc xuống xám ấm.
+  /// Softens `primaryContainer` into a pale tint of the brand orange.
   ///
-  /// `fidelity` cho `primaryContainer` đúng bằng hạt giống, tức `#FF6900` ở
-  /// nguyên chroma. Vai trò này chỉ được dùng làm nền tô kín, và toàn ở mảng
-  /// lớn thường trực trên màn: indicator thanh điều hướng, chip đang chọn,
-  /// segmented button, nút lọc ngày, thẻ số dư trang chủ, thẻ tổng quan và dải
-  /// số dư của sổ nợ, vòng tròn icon empty state, avatar hạng mục. Trải cam
-  /// bão hoà lên chừng đó diện tích thì nhìn lâu chói mắt.
+  /// `fidelity` hands back the seed itself, `#FF6900` at full chroma. That role
+  /// is only ever used as a solid fill, and always on large areas that sit on
+  /// screen the whole time: the navigation indicator, selected chips, the
+  /// segmented button, the date filter buttons, the debt overview card and its
+  /// per-person header, the empty state circle, category avatars. Saturated
+  /// orange across that much surface is genuinely hard to look at.
   ///
-  /// Xám ấm dưới đây đậm hơn nền thường đúng một nấc thấy được. Cam vẫn còn ở
-  /// `primary` `#A14000` — FAB, nút chính, viền ô nhập đang focus — nên app
-  /// không mất hẳn màu nhận diện, chỉ là màu lùi về mấy chi tiết nhỏ.
+  /// A pale tint keeps the hue — so selection still reads as *colour* rather
+  /// than as a darker shade of the background — while dropping the glare. Text
+  /// on top carries the saturation instead, where the area is small.
   ///
-  /// Đánh đổi đã biết: trạng thái đang chọn không còn tín hiệu màu, nên độ đậm
-  /// chữ (w700 so với w500) và viền `outline` đậm phải gánh phần phân biệt.
-  /// Đừng hạ hai thứ đó xuống.
+  /// This replaced a neutral warm grey that removed the glare but left the app
+  /// looking washed out: with the background already near-neutral, draining the
+  /// accents too meant nothing on screen had colour except the FAB. Keep the
+  /// backgrounds neutral and the accents tinted, not both neutral.
   ///
-  /// Tương phản với `onPrimaryContainer`: 9.1:1 ở bảng sáng, 8.4:1 ở bảng tối —
-  /// đều vượt AAA cho cỡ chữ thường, so với 4.5:1 vừa đủ AA của cặp cam cũ.
-  static ColorScheme _mutedPrimaryContainer(ColorScheme scheme) =>
+  /// Contrast against `onPrimaryContainer` is 7.51:1 light and 7.90:1 dark —
+  /// AAA at every text size the chips and navigation labels use, and better
+  /// than the 4.5:1 the saturated pair scraped by with.
+  static ColorScheme _tintedPrimaryContainer(ColorScheme scheme) =>
       scheme.brightness == Brightness.dark
       ? scheme.copyWith(
-          primaryContainer: const Color(0xFF4A3A33),
-          onPrimaryContainer: const Color(0xFFEFE1DA),
+          primaryContainer: const Color(0xFF5C3620),
+          onPrimaryContainer: const Color(0xFFFFD8C0),
         )
       : scheme.copyWith(
-          primaryContainer: const Color(0xFFE4DDD8),
-          onPrimaryContainer: const Color(0xFF3D332E),
+          primaryContainer: const Color(0xFFFFDFC9),
+          onPrimaryContainer: const Color(0xFF7A2E00),
         );
 
   static ThemeData _build(ColorScheme scheme) {
@@ -172,6 +180,9 @@ class AppTheme {
                 : scheme.onSurfaceVariant,
           ),
         ),
+        // The selected label takes `primary` rather than `onPrimaryContainer`:
+        // it sits below the indicator pill, not inside it, so it needs to read
+        // as the accent colour on the bar's own background. 6.12:1 there.
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => text.labelMedium?.copyWith(
             fontSize: 12.5,
@@ -179,7 +190,7 @@ class AppTheme {
                 ? FontWeight.w700
                 : FontWeight.w500,
             color: states.contains(WidgetState.selected)
-                ? scheme.onPrimaryContainer
+                ? scheme.primary
                 : scheme.onSurfaceVariant,
           ),
         ),
