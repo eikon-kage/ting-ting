@@ -1,25 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Ô lớn ngoài màn hình chính. Chỉ dùng các view mà RemoteViews cho phép
-     (LinearLayout / TextView / ImageView) — View thường sẽ không inflate được. -->
+     (LinearLayout / TextView / ImageView) — View thường sẽ không inflate được.
+
+     Số tiền lớn là view duy nhất ăn `layout_weight`: launcher đặt ô ra với
+     chiều cao của 2 ô lưới, thấp hơn chiều cao tự nhiên của nội dung, mà thứ
+     LinearLayout cắt khi thiếu chỗ là mấy view cuối cùng — dải Thu/Còn lại/Số
+     dư. Cho số tiền gánh phần co giãn thì hàng dưới luôn được đo đủ, còn con
+     số tự thu nhỏ cỡ chữ theo chỗ còn lại. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
     android:orientation="vertical"
-    android:padding="18dp">
+    android:padding="14dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="center_vertical"
         android:orientation="horizontal">
+
+        <!-- Đúng icon launcher của app: ô trên màn hình chính nằm ngay cạnh
+             icon đó, cùng một hình mới nhận ra là của cùng một app. -->
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:src="@mipmap/ic_launcher"
+            android:contentDescription="@null" />
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="7dp"
             android:layout_weight="1"
             android:text="@string/widget_title"
-            android:textColor="@color/widget_text_dim"
+            android:textColor="@color/widget_accent"
             android:textSize="11sp"
             android:textStyle="bold"
             android:letterSpacing="0.12"
@@ -38,38 +54,40 @@
         android:id="@+id/widget_label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="8dp"
         android:text="@string/widget_empty_label"
         android:textColor="@color/widget_text_dim"
-        android:textSize="13sp"
+        android:textSize="12sp"
         android:maxLines="1"
         android:ellipsize="end" />
 
     <TextView
         android:id="@+id/widget_amount"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:layout_marginTop="2dp"
+        android:gravity="center_vertical"
         android:text="@string/widget_empty_value"
         android:textColor="@color/widget_text"
-        android:textSize="32sp"
+        android:textSize="30sp"
         android:textStyle="bold"
         android:maxLines="1"
         android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="18sp"
-        android:autoSizeMaxTextSize="32sp" />
+        android:autoSizeMinTextSize="14sp"
+        android:autoSizeMaxTextSize="30sp" />
 
     <ImageView
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="8dp"
         android:background="@color/widget_divider"
         android:contentDescription="@null" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="9dp"
         android:orientation="horizontal">
 
         <LinearLayout
@@ -90,8 +108,9 @@
                 android:id="@+id/widget_income"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
                 android:text="@string/widget_empty_value"
-                android:textColor="@color/widget_text"
+                android:textColor="@color/widget_income"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:maxLines="1"
@@ -116,6 +135,7 @@
                 android:id="@+id/widget_net"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
                 android:text="@string/widget_empty_value"
                 android:textColor="@color/widget_text"
                 android:textSize="14sp"
@@ -142,8 +162,9 @@
                 android:id="@+id/widget_balance"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
                 android:text="@string/widget_empty_value"
-                android:textColor="@color/widget_text"
+                android:textColor="@color/widget_accent"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:maxLines="1"

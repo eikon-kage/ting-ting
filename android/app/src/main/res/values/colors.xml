@@ -1,14 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Cùng tông cam với seed color của app (0xFFFF6900). Đậm hơn seed vài nấc
-         để chữ trắng trên widget đọc thoải mái: 5.8:1 ở đầu sáng của dải, rộng
-         hơn hẳn mức 3.5:1 của bản xanh dương nguyên bản. Cả hai đầu giữ nguyên
-         hue 47.6° của seed, chroma lấy sát mép gamut sRGB ở mỗi mức sáng. -->
-    <color name="widget_bg_start">#FFA84900</color>
-    <color name="widget_bg_end">#FF4D1D00</color>
+    <!-- Panel tối cùng tông với app: `main.dart` ghim theme ở bản tối, nền đen
+         trung tính với accent xanh #5B9CD6. Bản cam trước lấy theo seed color,
+         nhưng seed giờ chỉ còn sống ở bảng màu biểu đồ — ngoài màn hình chính,
+         một ô cam nằm cạnh icon xanh của chính app trông như của app khác.
+
+         Dải chạy từ navy xuống gần đen chứ không phẳng một màu: widget nằm trên
+         hình nền của user nên cần mép nhìn thấy được, viền trắng 15% gánh nốt
+         phần còn lại. -->
+    <color name="widget_bg_start">#FF1C2536</color>
+    <color name="widget_bg_end">#FF0B0E14</color>
+    <color name="widget_stroke">#26FFFFFF</color>
+
+    <!-- `primary` của scheme tối. Dùng cho logo, tên app và số dư. -->
+    <color name="widget_accent">#FF5B9CD6</color>
 
     <!-- Chữ luôn trắng: widget nằm trên hình nền của user, không theo theme app. -->
     <color name="widget_text">#FFFFFFFF</color>
     <color name="widget_text_dim">#B3FFFFFF</color>
     <color name="widget_divider">#33FFFFFF</color>
+
+    <!-- `incomeText` / `expenseText` của bảng màu tối, đúng cặp màu dải Thu/Chi
+         trong app dùng. -->
+    <color name="widget_income">#FF4ECFA0</color>
+    <color name="widget_expense">#FFFF8A5C</color>
 </resources>
