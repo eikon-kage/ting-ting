@@ -196,6 +196,37 @@ class AppTheme {
   /// So 500 for the role and a dark navy for its foreground: `#08172B` gives
   /// 6.14:1 on the fill. Same trade the orange version made, same resolution.
   /// A white button label is not available in this hue at any usable shade.
+  /// Background and foreground for "needs your attention", as distinct from
+  /// "something failed".
+  ///
+  /// M3 has no warning role — it goes straight from `tertiary` to `error` — so
+  /// anything of this kind had to borrow `errorContainer`, which is a deep red.
+  /// Red is a claim that something broke. A missing notification permission has
+  /// not broken anything; it is a task the user has not done yet, and dressing
+  /// it as a failure both alarms and misinforms.
+  ///
+  /// The foreground is amber from trustybot's `warn` scale — `warn-400` light
+  /// on dark, `warn-800` dark on light.
+  ///
+  /// The dark background is *not* from that scale. `warn-900` was tried and
+  /// rendered as a muddy brown panel: amber ramps go brown at the dark end,
+  /// which is the same stain that `#5C3620` produced in
+  /// [_tintedPrimaryContainer]. The fix is the rule that section already
+  /// establishes — lift the fill one step off the surface ramp and let the
+  /// foreground carry the hue. `#2E2614` is that lift with a warm cast, 1.40:1
+  /// off black, and `NoticeBanner` adds a border at 20% of the foreground.
+  ///
+  /// The amber then reads at 9.31:1, so the warning is loud where it should be
+  /// — in the icon and the words — and quiet where a large fill would only be
+  /// dirty.
+  ///
+  /// Leave `errorContainer` alone for real errors — a redacted bank template,
+  /// a failed import. If both appear at once they should not look alike.
+  static (Color background, Color foreground) warningTone(ColorScheme scheme) =>
+      scheme.brightness == Brightness.dark
+      ? (const Color(0xFF2E2614), const Color(0xFFFAC515))
+      : (const Color(0xFFFEF7C3), const Color(0xFF854A0E));
+
   static ColorScheme _tintedPrimaryContainer(ColorScheme scheme) =>
       scheme.brightness == Brightness.dark
       ? scheme.copyWith(

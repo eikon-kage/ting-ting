@@ -17,6 +17,7 @@ import 'raw_log_page.dart';
 import 'rules_page.dart';
 import 'search_page.dart';
 import 'sources_page.dart';
+import 'theme/app_theme.dart';
 import 'theme/chart_palette.dart';
 import 'widgets/category_chips.dart';
 import 'widgets/date_range_bar.dart';
@@ -1198,14 +1199,17 @@ class _PermissionBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // Warning, not error. Nothing has failed here — the permission is simply
+    // still to be granted, and `errorContainer`'s deep red claimed otherwise.
+    final (background, foreground) = AppTheme.warningTone(scheme);
     return NoticeBanner(
       icon: Icons.notifications_off_rounded,
       title: 'Chưa có quyền đọc thông báo',
       message:
           'Bật "Ting Ting" trong Cài đặt > Quyền truy cập thông báo để app tự '
           'ghi giao dịch.',
-      background: scheme.errorContainer,
-      foreground: scheme.onErrorContainer,
+      background: background,
+      foreground: foreground,
       action: FilledButton.icon(
         onPressed: onGrant,
         icon: const Icon(Icons.settings_rounded, size: 20),
