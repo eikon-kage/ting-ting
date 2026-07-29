@@ -83,12 +83,55 @@ class AppTheme {
 
   static ThemeData dark() => _build(
     _tintedPrimaryContainer(
-      ColorScheme.fromSeed(
-        seedColor: brand,
-        brightness: Brightness.dark,
-        dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+      _blackSurfaces(
+        ColorScheme.fromSeed(
+          seedColor: brand,
+          brightness: Brightness.dark,
+          dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+        ),
       ),
     ),
+  );
+
+  /// Replaces the dark scheme's `surface` family with a black, neutral ramp.
+  ///
+  /// `fidelity` pulls the dark neutrals toward the seed just as it does the
+  /// light ones, so `surface` lands on `#1D100A` and the raised containers on
+  /// `#362720`. Those are browns. On a phone they read as a tinted screen
+  /// rather than as an app with a dark background.
+  ///
+  /// The ramp below is black at the bottom with neutral, very slightly cool
+  /// steps above it — blue leads red by 2–6/255. That coolness is deliberate
+  /// and is the opposite of the light scheme, where the ramp is warm: this is
+  /// what a dark finance app looks like, and warmth that reads as "cream" on
+  /// white reads as "stained" on black.
+  ///
+  /// True `#000000` at the base rather than a near-black: it costs nothing,
+  /// switches off OLED pixels, and gives the raised containers somewhere to
+  /// step up from. Cards, sheets and the navigation bar all sit on
+  /// `surfaceContainerLow`, so they lift off the background by fill; the card
+  /// border is left as a hairline against black rather than a drawn edge.
+  ///
+  /// Accents stay warm — `primary` and `primaryContainer` are untouched. Orange
+  /// on neutral black is the contrast that carries the brand here; matching the
+  /// background to the accent is what made the old scheme look brown.
+  ///
+  /// Contrast: `onSurface` 18.79:1, `onSurfaceVariant` 10.66:1 on the base and
+  /// 7.53:1 on `surfaceContainerHighest`. The chart colours hold up unchanged —
+  /// income 10.76:1, expense 9.04:1 against black.
+  static ColorScheme _blackSurfaces(ColorScheme scheme) => scheme.copyWith(
+    surface: const Color(0xFF000000),
+    surfaceDim: const Color(0xFF000000),
+    surfaceBright: const Color(0xFF2A2A2E),
+    surfaceContainerLowest: const Color(0xFF000000),
+    surfaceContainerLow: const Color(0xFF121215),
+    surfaceContainer: const Color(0xFF17171B),
+    surfaceContainerHigh: const Color(0xFF1F1F24),
+    surfaceContainerHighest: const Color(0xFF27272D),
+    onSurface: const Color(0xFFF2F2F5),
+    onSurfaceVariant: const Color(0xFFB8B8C0),
+    outline: const Color(0xFF7A7A85),
+    outlineVariant: const Color(0xFF33333A),
   );
 
   /// Softens `primaryContainer` into a pale tint of the brand orange.
@@ -109,14 +152,27 @@ class AppTheme {
   /// accents too meant nothing on screen had colour except the FAB. Keep the
   /// backgrounds neutral and the accents tinted, not both neutral.
   ///
-  /// Contrast against `onPrimaryContainer` is 7.51:1 light and 7.90:1 dark —
-  /// AAA at every text size the chips and navigation labels use, and better
-  /// than the 4.5:1 the saturated pair scraped by with.
+  /// The two schemes split the work differently, because the same recipe does
+  /// not survive both backgrounds.
+  ///
+  /// On white, a pale tint is the signal and the text is only there to be
+  /// read. On black that inverts. A mid-dark brown fill — `#5C3620` was tried —
+  /// does not read as "tinted", it reads as a stain, and the debt overview card
+  /// is a large enough panel to make that obvious. So the dark fill only lifts
+  /// one step off the surface ramp and the orange moves into the foreground,
+  /// where it sits on a small area and stays sharp.
+  ///
+  /// That leaves the dark fill nearly level with an unselected chip, 1.15:1, so
+  /// it is not carrying selection on its own. The orange label against the grey
+  /// one is, backed by w700 and the `outline` border — the same three cues the
+  /// light scheme leans on.
+  ///
+  /// Contrast against `onPrimaryContainer` is 7.51:1 light and 8.43:1 dark.
   static ColorScheme _tintedPrimaryContainer(ColorScheme scheme) =>
       scheme.brightness == Brightness.dark
       ? scheme.copyWith(
-          primaryContainer: const Color(0xFF5C3620),
-          onPrimaryContainer: const Color(0xFFFFD8C0),
+          primaryContainer: const Color(0xFF332822),
+          onPrimaryContainer: const Color(0xFFFFB694),
         )
       : scheme.copyWith(
           primaryContainer: const Color(0xFFFFDFC9),
@@ -142,7 +198,11 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
+        // Bigger than titleLarge's 22: the header is the only anchor on pages
+        // that are otherwise a wall of rows and numbers. Set here rather than
+        // on titleLarge itself, which dialogs also use.
         titleTextStyle: text.titleLarge?.copyWith(
+          fontSize: 26,
           fontWeight: FontWeight.w700,
           color: scheme.onSurface,
         ),

@@ -32,6 +32,11 @@ class TingTingApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
+      // Pinned to dark rather than following the system. The black scheme is
+      // the intended look; leaving it on the system setting meant most phones
+      // showed the light one and the dark scheme was rarely seen. Drop this
+      // line to hand the choice back to the OS.
+      themeMode: ThemeMode.dark,
       home: const RootShell(),
     );
   }
