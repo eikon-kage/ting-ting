@@ -112,9 +112,10 @@ class AppTheme {
   /// `surfaceContainerLow`, so they lift off the background by fill; the card
   /// border is left as a hairline against black rather than a drawn edge.
   ///
-  /// Accents stay warm — `primary` and `primaryContainer` are untouched. Orange
-  /// on neutral black is the contrast that carries the brand here; matching the
-  /// background to the accent is what made the old scheme look brown.
+  /// Only the surface roles. The warm accents that sit on this ramp are set in
+  /// [_tintedPrimaryContainer]. Orange on neutral black is the contrast that
+  /// carries the brand here; matching the background to the accent is what made
+  /// the old scheme look brown.
   ///
   /// Contrast: `onSurface` 18.79:1, `onSurfaceVariant` 10.66:1 on the base and
   /// 7.53:1 on `surfaceContainerHighest`. The chart colours hold up unchanged —
@@ -167,12 +168,34 @@ class AppTheme {
   /// one is, backed by w700 and the `outline` border — the same three cues the
   /// light scheme leans on.
   ///
-  /// Contrast against `onPrimaryContainer` is 7.51:1 light and 8.43:1 dark.
+  /// Contrast against `onPrimaryContainer` is 7.51:1 light and 5.50:1 dark.
+  ///
+  /// The dark scheme also takes a hand-picked `primary`. M3 derives a pale
+  /// `#FFB694` for dark mode, which is the right call when the role has to work
+  /// as text, but `primary` is also the fill behind the FAB and every filled
+  /// button — and as a fill that pale orange looks washed out, not deliberate.
+  /// `#FF7A2F` is the same hue with the chroma left in.
+  ///
+  /// Its foreground has to be dark. White on a saturated orange tops out around
+  /// 3.5:1 whatever the shade, so a white label here would fail AA outright;
+  /// `#2B1000` gives 6.86:1. That is also why the light scheme keeps a deep
+  /// `primary` with white on top instead — the same trade, resolved the other
+  /// way round.
+  ///
+  /// Still safe as text: `#FF7A2F` reads 8.08:1 on the black surface, which is
+  /// what the app bar icons, the focused field border and the selected
+  /// navigation label rely on.
   static ColorScheme _tintedPrimaryContainer(ColorScheme scheme) =>
       scheme.brightness == Brightness.dark
       ? scheme.copyWith(
+          primary: const Color(0xFFFF7A2F),
+          onPrimary: const Color(0xFF2B1000),
           primaryContainer: const Color(0xFF332822),
-          onPrimaryContainer: const Color(0xFFFFB694),
+          // Same orange as `primary`, on purpose. The navigation label takes
+          // `primary` while a chip label takes this one, and two different
+          // oranges for the one meaning — "selected" — reads as a mistake.
+          // 5.50:1 on the container, so the chip label clears AA.
+          onPrimaryContainer: const Color(0xFFFF7A2F),
         )
       : scheme.copyWith(
           primaryContainer: const Color(0xFFFFDFC9),
