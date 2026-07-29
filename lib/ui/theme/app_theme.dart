@@ -7,15 +7,17 @@ import 'package:flutter/material.dart';
 /// vắt gần hết chroma, sinh `primary` là `#8E4D2E` — tức đúng màu nâu mà app
 /// dùng trước khi đổi sang cam, đổi seed mà nhìn vào không thấy khác gì.
 ///
-/// `fidelity` giữ nền trung tính y như `tonalSpot` (`surface` sáng vẫn là
-/// `#FFF8F6`) nhưng bám sát hạt giống ở các vai trò nhấn.
-///
-/// Không vai trò nào phải đặt lại bằng tay:
+/// `fidelity` bám sát hạt giống ở các vai trò nhấn:
 ///
 /// - `primary` `#A14000` — 6.5:1 với chữ trắng.
-/// - `primaryContainer` đúng bằng `#FF6900`, tức chính màu được yêu cầu; đây là
-///   chỗ cam hiện rõ nhất (indicator thanh điều hướng, chip đang chọn,
-///   segmented button). 4.5:1 với `onPrimaryContainer`, vừa đủ AA.
+/// - `primaryContainer` đúng bằng `#FF6900`, tức chính màu được yêu cầu. Chói
+///   khi trải thành mảng nền lớn, nên chỉ còn dùng cho các mảng trang trí nhỏ:
+///   avatar hạng mục, huy hiệu app đang ghi nhận, thẻ số dư trang chủ. Chrome
+///   đang chọn đã chuyển sang xám ấm — xem [AppTheme.selectedTone]. 4.5:1 với
+///   `onPrimaryContainer`, vừa đủ AA.
+///
+/// Đổi lại nó kéo cả họ `surface` ám cam theo, nên bảng sáng phải đặt lại nền
+/// bằng tay — xem [_neutralSurfaces].
 class AppTheme {
   const AppTheme._();
 
@@ -36,10 +38,41 @@ class AppTheme {
   static const Color brand = Color(0xFFFF6900);
 
   static ThemeData light() => _build(
-    ColorScheme.fromSeed(
-      seedColor: brand,
-      dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+    _neutralSurfaces(
+      ColorScheme.fromSeed(
+        seedColor: brand,
+        dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+      ),
     ),
+  );
+
+  /// Thay họ `surface` của bảng sáng bằng thang gần như trung tính.
+  ///
+  /// `fidelity` sinh nền ám cam khá nặng: `surfaceContainerHigh` ra `#FEE3D8`,
+  /// tức hồng đào thấy rõ — mà đúng vai trò đó lát nền cho chip, ô nhập, thanh
+  /// điều hướng và mọi khối phụ, nên cả màn hình như bị phủ một lớp cam. Thang
+  /// dưới đây giữ nguyên thứ tự đậm dần, chỉ còn chút hơi ấm (chênh lệch giữa
+  /// kênh đỏ và kênh lam còn 3–4/255 thay vì 30–40) để không lạnh hẳn sang xám
+  /// xanh.
+  ///
+  /// Chỉ đụng vào nền và chữ trên nền. `primary`, `primaryContainer` cùng các
+  /// vai trò nhấn khác vẫn lấy từ hạt giống — cam vẫn là điểm nhấn duy nhất.
+  ///
+  /// Tương phản trên nền mới: `onSurface` 16:1, `onSurfaceVariant` 7.7:1 (còn
+  /// 6.4:1 khi nằm trên `surfaceContainerHighest`) — đều vượt AA.
+  static ColorScheme _neutralSurfaces(ColorScheme scheme) => scheme.copyWith(
+    surface: const Color(0xFFFDFBFA),
+    surfaceBright: const Color(0xFFFDFBFA),
+    surfaceDim: const Color(0xFFEDE9E7),
+    surfaceContainerLowest: const Color(0xFFFFFFFF),
+    surfaceContainerLow: const Color(0xFFFAF7F6),
+    surfaceContainer: const Color(0xFFF5F2F0),
+    surfaceContainerHigh: const Color(0xFFEFECEA),
+    surfaceContainerHighest: const Color(0xFFEAE6E4),
+    onSurface: const Color(0xFF221D1B),
+    onSurfaceVariant: const Color(0xFF56504D),
+    outline: const Color(0xFF857D79),
+    outlineVariant: const Color(0xFFE0DBD8),
   );
 
   static ThemeData dark() => _build(
@@ -50,9 +83,33 @@ class AppTheme {
     ),
   );
 
+  /// Nền và chữ cho chrome đang ở trạng thái chọn: indicator thanh điều hướng,
+  /// chip, segmented button, nút lọc ngày.
+  ///
+  /// Trước đây mấy chỗ này lát `primaryContainer`, tức cam đặc `#FF6900` ở
+  /// nguyên chroma — đọc lâu thì chói. Vì đó là các mảng nền lớn và luôn hiện
+  /// trên màn hình, tô nguyên màu nhấn là quá tay; giờ dùng xám ấm đậm hơn nền
+  /// một nấc rõ.
+  ///
+  /// Đánh đổi đã biết: không còn tín hiệu màu cho trạng thái chọn, nên độ đậm
+  /// chữ (w700 so với w500) và viền đậm hơn phải gánh phần phân biệt. Đừng hạ
+  /// hai thứ đó xuống.
+  ///
+  /// `primaryContainer` vẫn nguyên cam cho các chỗ trang trí — avatar hạng mục,
+  /// huy hiệu app đang ghi nhận, thẻ số dư trang chủ — nên app không mất màu
+  /// nhận diện.
+  ///
+  /// Tương phản chữ trên nền: 9.1:1 ở bảng sáng, 8.4:1 ở bảng tối — đều vượt
+  /// AAA cho cỡ chữ thường.
+  static (Color background, Color foreground) selectedTone(ColorScheme scheme) =>
+      scheme.brightness == Brightness.dark
+      ? (const Color(0xFF4A3A33), const Color(0xFFEFE1DA))
+      : (const Color(0xFFE4DDD8), const Color(0xFF3D332E));
+
   static ThemeData _build(ColorScheme scheme) {
     final base = ThemeData(colorScheme: scheme, useMaterial3: true);
     final text = _textTheme(base.textTheme, scheme);
+    final (selectedBg, selectedFg) = selectedTone(scheme);
     return base.copyWith(
       textTheme: text,
       scaffoldBackgroundColor: scheme.surface,
@@ -95,7 +152,7 @@ class AppTheme {
         backgroundColor: scheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        indicatorColor: scheme.primaryContainer,
+        indicatorColor: selectedBg,
         indicatorShape: const StadiumBorder(),
         // Luôn hiện nhãn: ba tab tên tiếng Việt, chỉ nhìn icon rất dễ đoán nhầm.
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -103,7 +160,7 @@ class AppTheme {
           (states) => IconThemeData(
             size: 26,
             color: states.contains(WidgetState.selected)
-                ? scheme.onPrimaryContainer
+                ? selectedFg
                 : scheme.onSurfaceVariant,
           ),
         ),
@@ -114,7 +171,7 @@ class AppTheme {
                 ? FontWeight.w700
                 : FontWeight.w500,
             color: states.contains(WidgetState.selected)
-                ? scheme.primary
+                ? selectedFg
                 : scheme.onSurfaceVariant,
           ),
         ),
@@ -171,8 +228,8 @@ class AppTheme {
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: SegmentedButton.styleFrom(
-          selectedBackgroundColor: scheme.primaryContainer,
-          selectedForegroundColor: scheme.onPrimaryContainer,
+          selectedBackgroundColor: selectedBg,
+          selectedForegroundColor: selectedFg,
           textStyle: text.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
@@ -181,12 +238,20 @@ class AppTheme {
         labelStyle: text.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         secondaryLabelStyle: text.labelLarge?.copyWith(
           fontWeight: FontWeight.w700,
-          color: scheme.onPrimaryContainer,
+          color: selectedFg,
         ),
-        selectedColor: scheme.primaryContainer,
-        checkmarkColor: scheme.onPrimaryContainer,
+        selectedColor: selectedBg,
+        checkmarkColor: selectedFg,
         backgroundColor: scheme.surfaceContainerHigh,
-        side: BorderSide(color: scheme.outlineVariant),
+        // Nền chọn chỉ đậm hơn nền thường một nấc, nên viền phải gánh thêm:
+        // chip đang chọn lấy `outline` đậm, chip thường giữ `outlineVariant`.
+        side: WidgetStateBorderSide.resolveWith(
+          (states) => BorderSide(
+            color: states.contains(WidgetState.selected)
+                ? scheme.outline
+                : scheme.outlineVariant,
+          ),
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
 
