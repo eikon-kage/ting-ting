@@ -248,9 +248,30 @@ class AppTheme {
           fontWeight: FontWeight.w700,
           color: scheme.onPrimaryContainer,
         ),
-        selectedColor: scheme.primaryContainer,
+        // Phải khai bằng `color` chứ không phải cặp `backgroundColor` +
+        // `selectedColor`, dù cặp kia đọc gọn hơn.
+        //
+        // `RawChip._getBackgroundColor` dựng một `ColorTween` từ nền thường
+        // sang nền chọn, và nó tính đầu "nền thường" bằng cách gọi
+        // `resolveColor` mà không truyền `selectedColor`. Trong lúc chip đang ở
+        // trạng thái chọn, `_IndividualOverrides.resolve` gặp `selected` thì
+        // trả thẳng `selectedColor` — ở đây là `null` — nên rơi xuống mặc định
+        // M3 `_FilterChipDefaultsM3.color`, tức `secondaryContainer`. Với hạt
+        // giống này màu đó là `#FF9969`, cam sáng. Kết quả: bấm chọn thì nền
+        // nháy nguyên một nhịp cam rồi mới fade về xám.
+        //
+        // `resolve` short-circuit ngay khi `color != null`, nên khai một
+        // `WidgetStateProperty` là bịt được cả hai đầu tween.
+        color: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return scheme.onSurface.withValues(alpha: 0.12);
+          }
+          if (states.contains(WidgetState.selected)) {
+            return scheme.primaryContainer;
+          }
+          return scheme.surfaceContainerHigh;
+        }),
         checkmarkColor: scheme.onPrimaryContainer,
-        backgroundColor: scheme.surfaceContainerHigh,
         // Nền chọn chỉ đậm hơn nền thường một nấc, nên viền phải gánh thêm:
         // chip đang chọn lấy `outline` đậm, chip thường giữ `outlineVariant`.
         side: WidgetStateBorderSide.resolveWith(
