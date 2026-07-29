@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_label">Ting Ting · Thu chi</string>
+    <string name="widget_description">Ô lớn hiện tiền đã chi tháng này, thu, còn lại và số dư.</string>
+
+    <string name="widget_title">TING TING</string>
+    <string name="widget_income_label">Thu</string>
+    <string name="widget_net_label">Còn lại</string>
+    <string name="widget_balance_label">Số dư</string>
+
+    <!-- Hiện trước khi app kịp đẩy số liệu sang (widget vừa thêm, máy vừa khởi động). -->
+    <string name="widget_empty_label">Mở app để cập nhật</string>
+    <string name="widget_empty_value">—</string>
+</resources>

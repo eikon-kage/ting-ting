@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cùng tông cam với seed color của app (0xFFFF6900). Đậm hơn seed vài nấc
+         để chữ trắng trên widget đọc thoải mái: 5.8:1 ở đầu sáng của dải, rộng
+         hơn hẳn mức 3.5:1 của bản xanh dương nguyên bản. Cả hai đầu giữ nguyên
+         hue 47.6° của seed, chroma lấy sát mép gamut sRGB ở mỗi mức sáng. -->
+    <color name="widget_bg_start">#FFA84900</color>
+    <color name="widget_bg_end">#FF4D1D00</color>
+
+    <!-- Chữ luôn trắng: widget nằm trên hình nền của user, không theo theme app. -->
+    <color name="widget_text">#FFFFFFFF</color>
+    <color name="widget_text_dim">#B3FFFFFF</color>
+    <color name="widget_divider">#33FFFFFF</color>
+</resources>

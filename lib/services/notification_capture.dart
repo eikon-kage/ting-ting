@@ -1,0 +1,227 @@
+import 'dart:async';
+import 'dart:io';
+
+// `foundation` cũng có một lớp tên Category (chú thích cho dartdoc), che đi để
+// tên nhóm của app không bị lẫn.
+import 'package:flutter/foundation.dart' hide Category;
+import 'package:notification_listener_service/notification_event.dart';
+import 'package:notification_listener_service/notification_listener_service.dart';
+
+import '../data/data_store.dart';
+import '../domain/bank_names.dart';
+import '../domain/bank_parser.dart';
+import '../domain/txn_factory.dart';
+import '../models/models.dart';
+import 'txn_alerts.dart';
+
+/// Nghe notification hệ thống, bóc tách giao dịch rồi nhờ tầng dữ liệu lưu lại.
+///
+/// Chỉ chạy trên Android — iOS không cho app đọc notification của app khác.
+/// Lớp này không biết dữ liệu nằm ở đâu: nó chỉ ghép mảnh nền tảng (stream
+/// notification) với tầng domain (parser) và repository.
+class NotificationCapture {
+  NotificationCapture._(this._data);
+
+  static final NotificationCapture instance = NotificationCapture._(
+    DataStore.instance,
+  );
+
+  /// Quét lại thanh trạng thái chỉ bắn thông báo cho giao dịch mới chừng này
+  /// đổ lại. Cũ hơn thì coi như user đã biết rồi — mở app sau một ngày mà bị
+  /// dội mười cái thông báo thì phiền hơn là có ích.
+  static const Duration _freshWindow = Duration(minutes: 30);
+
+  final DataStore _data;
+  StreamSubscription<ServiceNotificationEvent>? _sub;
+
+  bool get supported => Platform.isAndroid;
+
+  Future<bool> isPermissionGranted() async {
+    if (!supported) return false;
+    return NotificationListenerService.isPermissionGranted();
+  }
+
+  /// Mở màn hình Notification access của hệ thống cho user tự bật.
+  Future<bool> requestPermission() async {
+    if (!supported) return false;
+    return NotificationListenerService.requestPermission();
+  }
+
+  Future<void> start() async {
+    if (!supported || _sub != null) return;
+    _sub = NotificationListenerService.notificationsStream.listen(
+      _handle,
+      onError: (Object e) => debugPrint('notification stream error: $e'),
+    );
+    await _data.rawLogs.prune();
+    await syncActiveNotifications();
+  }
+
+  Future<void> stop() async {
+    await _sub?.cancel();
+    _sub = null;
+  }
+
+  /// Quét các notification còn đang hiển thị trên thanh trạng thái — vớt lại
+  /// những giao dịch xảy ra lúc app chưa nghe.
+  ///
+  /// Gọi lúc bắt đầu nghe, và định kỳ từ [CaptureService] để phòng trường hợp
+  /// hệ thống ngắt kết nối service đọc thông báo mà không báo gì.
+  Future<void> syncActiveNotifications() async {
+    try {
+      final active = await NotificationListenerService.getActiveNotifications();
+      final cutoff = DateTime.now().subtract(_freshWindow);
+      for (final event in active) {
+        // Giao dịch vừa xảy ra thì vẫn bắn thông báo — đây đúng là trường hợp
+        // app bị giết, mở lại và thông báo ngân hàng còn nằm trên thanh trạng
+        // thái. Cái cũ hơn thì lặng lẽ ghi vào sổ.
+        final postTime = event.timestamp > 0
+            ? DateTime.fromMillisecondsSinceEpoch(event.timestamp)
+            : null;
+        await _handle(
+          event,
+          notify: postTime != null && postTime.isAfter(cutoff),
+        );
+      }
+    } catch (e) {
+      debugPrint('backfill failed: $e');
+    }
+  }
+
+  Future<void> _handle(
+    ServiceNotificationEvent event, {
+    bool notify = true,
+  }) async {
+    // Bỏ qua sự kiện gỡ notification và các notification thường trực
+    // (thanh nhạc, đang tải file...) — không phải giao dịch.
+    if (event.hasRemoved || event.onGoing) return;
+
+    final packageName = event.packageName;
+    if (packageName.isEmpty) return;
+    if (packageName.startsWith('com.trustsoft.tingting')) return;
+
+    final title = event.title;
+    final content = event.content;
+    if (title.isEmpty && content.isEmpty) return;
+
+    final postTime = event.timestamp > 0
+        ? DateTime.fromMillisecondsSinceEpoch(event.timestamp)
+        : DateTime.now();
+
+    final profile = await _data.parserProfiles.byPackage(packageName);
+    final parsed = BankParser.parse(title, content, profile: profile);
+
+    await _data.rawLogs.record(
+      RawLog(
+        packageName: packageName,
+        title: title,
+        content: content,
+        postTime: postTime,
+        parsed: false,
+      ),
+    );
+
+    if (parsed == null) return;
+
+    // Notification này trông như một giao dịch -> đề xuất app đó làm nguồn.
+    final source = await _data.sources.registerCandidate(
+      Source(
+        packageName: packageName,
+        displayName: suggestedBankName(packageName),
+        enabled: false,
+      ),
+    );
+    if (source == null || !source.enabled) return;
+
+    await _importTxn(
+      packageName: packageName,
+      bankName: source.displayName,
+      title: title,
+      content: content,
+      postTime: postTime,
+      parsed: parsed,
+      notify: notify,
+    );
+  }
+
+  /// Trả về `true` nếu giao dịch được ghi mới (không phải bản trùng).
+  Future<bool> _importTxn({
+    required String packageName,
+    required String bankName,
+    required String title,
+    required String content,
+    required DateTime postTime,
+    required ParseResult parsed,
+    List<Rule>? userRules,
+    List<Category>? categories,
+    bool notify = true,
+  }) async {
+    final rules = userRules ?? await _data.rules.all();
+    final groups = categories ?? await _data.categories.all();
+    final saved = await _data.txns.add(
+      TxnFactory.fromNotification(
+        packageName: packageName,
+        bankName: bankName,
+        title: title,
+        content: content,
+        postTime: postTime,
+        parsed: parsed,
+        userRules: rules,
+        categories: groups,
+      ),
+    );
+    if (saved == null) return false;
+    if (notify) await TxnAlerts.instance.show(saved);
+    return true;
+  }
+
+  /// Bật một nguồn rồi dựng lại giao dịch từ nhật ký thô đã lưu, để những
+  /// notification đến trước lúc bật không bị mất.
+  Future<int> enableSourceAndBackfill(Source source) async {
+    await _data.sources.setEnabled(source.packageName, enabled: true);
+    return _rebuildFromLogs(source);
+  }
+
+  /// Đọc lại toàn bộ nhật ký của một nguồn bằng mẫu bóc tách hiện tại.
+  ///
+  /// Gọi sau khi user sửa mẫu ở màn "Ngân hàng": những thông báo trước đó
+  /// parser chịu thua nay đọc ra được sẽ thành giao dịch. Giao dịch đã có
+  /// không bị nhân đôi — tầng dữ liệu chặn theo dấu vân tay.
+  Future<int> reparseSource(String packageName) async {
+    final source = await _data.sources.byPackage(packageName);
+    if (source == null || !source.enabled) return 0;
+    return _rebuildFromLogs(source);
+  }
+
+  Future<int> _rebuildFromLogs(Source source) async {
+    final logs = await _data.rawLogs.forPackage(source.packageName);
+    final rules = await _data.rules.all();
+    final categories = await _data.categories.all();
+    final profile = await _data.parserProfiles.byPackage(source.packageName);
+    var imported = 0;
+    for (final log in logs) {
+      final parsed = BankParser.parse(
+        log.title,
+        log.content,
+        profile: profile,
+      );
+      if (parsed == null) continue;
+      final created = await _importTxn(
+        packageName: log.packageName,
+        bankName: source.displayName,
+        title: log.title,
+        content: log.content,
+        postTime: log.postTime,
+        parsed: parsed,
+        userRules: rules,
+        categories: categories,
+        notify: false,
+      );
+      if (created) {
+        imported++;
+        if (log.id != null) await _data.rawLogs.markParsed(log.id!);
+      }
+    }
+    return imported;
+  }
+}
