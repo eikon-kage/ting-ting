@@ -6,6 +6,7 @@ import '../services/notification_capture.dart';
 import 'bank_template_page.dart';
 import 'controllers/bank_templates_controller.dart';
 import 'format.dart';
+import 'theme/app_theme.dart';
 import 'widgets/empty_state.dart';
 
 /// Tab "Ngân hàng": mỗi app gửi thông báo một dòng, bật/tắt ghi nhận và khai
@@ -59,6 +60,13 @@ class _BankTemplatesPageState extends State<BankTemplatesPage> {
       ),
     );
   }
+
+  /// Hộp thoại tự chạy phép thử rồi tự đổi sang phần kết quả — gộp vòng xoay và
+  /// kết quả vào một chỗ, khỏi phải đóng mở hai hộp thoại nối nhau.
+  Future<void> _runCaptureTest() => showDialog<void>(
+    context: context,
+    builder: (_) => _CaptureTestDialog(run: _controller.runCaptureTest),
+  );
 
   Future<void> _openTemplate(BankTemplateEntry entry) async {
     await Navigator.of(context).push(
@@ -121,6 +129,9 @@ class _BankTemplatesPageState extends State<BankTemplatesPage> {
           final pinWidget = _controller.canPinWidget
               ? _PinWidgetTile(onTap: _pinWidget)
               : null;
+          final captureTest = _controller.captureSupported
+              ? _CaptureTestTile(onTap: _runCaptureTest)
+              : null;
           if (_controller.isEmpty) {
             // Expanded chứ không phải ListView: [_EmptyList] căn giữa theo
             // chiều cao nên cần một khung có chiều cao xác định.
@@ -128,6 +139,7 @@ class _BankTemplatesPageState extends State<BankTemplatesPage> {
               children: [
                 ?capture,
                 ?pinWidget,
+                ?captureTest,
                 const Expanded(child: _EmptyList()),
               ],
             );
@@ -140,6 +152,7 @@ class _BankTemplatesPageState extends State<BankTemplatesPage> {
               children: [
                 ?capture,
                 ?pinWidget,
+                ?captureTest,
                 if (_controller.hasRedacted) const _RedactedBanner(),
                 if (active.isNotEmpty) const _SectionHeader('Đang ghi nhận'),
                 for (final entry in active) _tile(entry),
@@ -233,8 +246,9 @@ class _CaptureBanner extends StatelessWidget {
           : Icons.pause_circle_outline_rounded,
       title: running ? 'Đang theo dõi nền' : 'Theo dõi nền đang tắt',
       message: running
-          ? 'Giao dịch vẫn được ghi khi app đóng. Thông báo thường trực trên '
-                'thanh trạng thái là của phần này — Android bắt buộc phải có.'
+          ? 'Giao dịch vẫn được ghi khi app đóng. Android bắt buộc phần này '
+                'phải có một thông báo thường trực; app đã đẩy nó xuống cuối '
+                'bảng thông báo, không hiện trên thanh trạng thái.'
           : 'App chỉ ghi được giao dịch khi đang mở. Vuốt app khỏi recents là '
                 'bỏ lỡ mọi thông báo cho tới lúc mở lại.',
       background: running
@@ -283,6 +297,168 @@ class _PinWidgetTile extends StatelessWidget {
     );
   }
 }
+
+/// Nút bắn thông báo giả để tự kiểm tra đường đọc thông báo.
+///
+/// Không có nó thì cách duy nhất để biết app còn đọc được hay không là ngồi đợi
+/// ngân hàng chuyển tiền — mà lúc không thấy gì thì cũng không biết hỏng ở
+/// quyền, ở service, hay ở mẫu bóc tách.
+class _CaptureTestTile extends StatelessWidget {
+  const _CaptureTestTile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.notification_add_outlined),
+      title: const Text('Gửi thông báo thử'),
+      subtitle: const Text(
+        'Bắn một thông báo giao dịch giả rồi xem app có đọc lại được không.',
+      ),
+      trailing: const Icon(Icons.play_arrow_rounded),
+      onTap: onTap,
+    );
+  }
+}
+
+/// Chạy phép thử đọc thông báo và báo kết quả.
+///
+/// Tự chạy trong [initState] thay vì nhận sẵn kết quả: phép thử mất tới vài
+/// giây, cần một chỗ hiện vòng xoay trong lúc chờ.
+class _CaptureTestDialog extends StatefulWidget {
+  const _CaptureTestDialog({required this.run});
+
+  final Future<CaptureTestResult> Function() run;
+
+  @override
+  State<_CaptureTestDialog> createState() => _CaptureTestDialogState();
+}
+
+class _CaptureTestDialogState extends State<_CaptureTestDialog> {
+  CaptureTestResult? _result;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.run().then((result) {
+      if (mounted) setState(() => _result = result);
+    });
+  }
+
+  /// Mở màn Notification access của hệ thống rồi đóng hộp thoại — quyền đổi ở
+  /// ngoài app, giữ kết quả cũ lại chỉ tổ nói sai về trạng thái hiện tại.
+  void _openSettings() {
+    NotificationCapture.instance.requestPermission();
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final result = _result;
+    if (result == null) {
+      return const AlertDialog(
+        title: Text('Đang thử'),
+        content: Row(
+          children: [
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                'Đã bắn một thông báo giao dịch giả, chờ xem nó có quay lại '
+                'app không...',
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final scheme = Theme.of(context).colorScheme;
+    // Cùng sắc vàng với các ô cảnh báo khác trong app: chưa cấp quyền hay
+    // service đứt không phải lỗi hỏng, chỉ là còn thiếu một bước.
+    final (_, warningText) = AppTheme.warningTone(scheme);
+    final tone = switch (result) {
+      CaptureTestResult.parsed => (Icons.check_circle_rounded, scheme.primary),
+      CaptureTestResult.redacted ||
+      CaptureTestResult.missed ||
+      CaptureTestResult.noPermission ||
+      CaptureTestResult.notCapturing => (
+        Icons.error_outline_rounded,
+        warningText,
+      ),
+      CaptureTestResult.unparsed ||
+      CaptureTestResult.unsupported => (
+        Icons.info_outline_rounded,
+        scheme.onSurfaceVariant,
+      ),
+    };
+
+    final canOpenSettings =
+        result == CaptureTestResult.noPermission ||
+        result == CaptureTestResult.missed ||
+        result == CaptureTestResult.redacted;
+
+    return AlertDialog(
+      icon: Icon(tone.$1, color: tone.$2, size: 32),
+      title: Text(_captureTestTitle(result)),
+      content: Text(_captureTestMessage(result)),
+      actions: [
+        if (canOpenSettings)
+          TextButton(
+            onPressed: _openSettings,
+            child: const Text('Mở cài đặt quyền'),
+          ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Đóng'),
+        ),
+      ],
+    );
+  }
+}
+
+String _captureTestTitle(CaptureTestResult result) => switch (result) {
+  CaptureTestResult.parsed => 'App đọc được thông báo',
+  CaptureTestResult.redacted => 'Đọc được, nhưng Android giấu nội dung',
+  CaptureTestResult.unparsed => 'Nhận được, nhưng không ra số tiền',
+  CaptureTestResult.missed => 'Thông báo không quay lại app',
+  CaptureTestResult.noPermission => 'Chưa có quyền đọc thông báo',
+  CaptureTestResult.notCapturing => 'Theo dõi nền đang tắt',
+  CaptureTestResult.unsupported => 'Chỉ chạy trên Android',
+};
+
+String _captureTestMessage(CaptureTestResult result) => switch (result) {
+  CaptureTestResult.parsed =>
+    'Thông báo thử đã đi trọn đường: hệ thống đẩy sang, app nhận được, và bóc '
+        'tách ra đúng số tiền. Thông báo ngân hàng thật cũng sẽ được ghi như '
+        'vậy, miễn là app đó đã bật ở danh sách bên dưới.',
+  CaptureTestResult.redacted =>
+    'App có nhận được thông báo, nhưng Android đã thay nội dung bằng câu báo '
+        'ẩn trước khi giao. Mẫu bóc tách không cứu được — phải cấp quyền đọc '
+        'thông báo nhạy cảm (xem hướng dẫn ở ô đỏ trong màn này).',
+  CaptureTestResult.unparsed =>
+    'Thông báo thử về tới nhật ký nhưng parser không tìm thấy số tiền trong '
+        'đó. Mở Nhật ký thông báo để xem app nhận được đúng những chữ gì.',
+  CaptureTestResult.missed =>
+    'Thông báo thử đã bắn ra nhưng không quay lại app. Quyền và theo dõi nền '
+        'đều đang bật, nên nhiều khả năng hệ thống đã ngắt kết nối service đọc '
+        'thông báo mà không báo gì: tắt rồi bật lại quyền của Ting Ting trong '
+        'Cài đặt là nối lại được.',
+  CaptureTestResult.noPermission =>
+    'Bật "Ting Ting" trong Cài đặt > Quyền truy cập thông báo rồi thử lại. '
+        'Chưa có quyền này thì app không nhận được thông báo nào cả.',
+  CaptureTestResult.notCapturing =>
+    'Bật theo dõi nền ở ô đầu màn hình này rồi thử lại — chính nó là thứ nghe '
+        'thông báo, tắt đi thì không còn ai nghe.',
+  CaptureTestResult.unsupported =>
+    'iOS không cho app đọc thông báo của app khác, nên phép thử này chỉ có '
+        'nghĩa trên Android.',
+};
 
 /// Android 15 giấu nội dung thông báo ngân hàng với app đọc thông báo. Không
 /// báo thì user ngồi sửa mẫu bóc tách cả buổi cũng không ra.
@@ -402,14 +578,17 @@ class _HelpStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Grow the badge along with the text: a fixed box clips the digit once the
+    // system font scale goes up.
+    final side = MediaQuery.textScalerOf(context).scale(22);
     return Padding(
       padding: const EdgeInsets.only(top: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 22,
-            height: 22,
+            width: side,
+            height: side,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: theme.colorScheme.primaryContainer,
@@ -431,8 +610,11 @@ class _HelpStep extends StatelessWidget {
   }
 }
 
-/// Lệnh adb dài hơn bề ngang dialog — cho cuộn ngang thay vì ngắt dòng lung
-/// tung, để user nhìn ra đâu là một lệnh liền mạch.
+/// The adb command is wider than the dialog, so it wraps onto several lines
+/// instead of scrolling horizontally: a one-line box hid everything past
+/// `adb shell appops set -`, including the `--uid` part step 2's footnote tells
+/// the user to drop. The copy button sits under the text so the command keeps
+/// the full width.
 class _CommandBox extends StatelessWidget {
   const _CommandBox({required this.command, required this.onCopy});
 
@@ -443,33 +625,30 @@ class _CommandBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      margin: const EdgeInsets.only(top: 10, left: 32),
-      padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SelectableText(
-                command,
-                maxLines: 1,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontFamily: 'monospace',
-                  height: 1.4,
-                ),
-              ),
+          SelectableText(
+            command,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontFamily: 'monospace',
+              height: 1.4,
             ),
           ),
-          IconButton(
-            onPressed: onCopy,
-            icon: const Icon(Icons.copy_rounded, size: 18),
-            tooltip: 'Copy lệnh',
-            visualDensity: VisualDensity.compact,
+          Align(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              onPressed: onCopy,
+              icon: const Icon(Icons.copy_rounded, size: 18),
+              tooltip: 'Copy lệnh',
+              visualDensity: VisualDensity.compact,
+            ),
           ),
         ],
       ),

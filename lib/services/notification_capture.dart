@@ -7,11 +7,13 @@ import 'package:flutter/foundation.dart' hide Category;
 import 'package:notification_listener_service/notification_event.dart';
 import 'package:notification_listener_service/notification_listener_service.dart';
 
+import '../core/app_id.dart';
 import '../data/data_store.dart';
 import '../domain/bank_names.dart';
 import '../domain/bank_parser.dart';
 import '../domain/txn_factory.dart';
 import '../models/models.dart';
+import 'test_notification.dart';
 import 'txn_alerts.dart';
 
 /// Nghe notification hệ thống, bóc tách giao dịch rồi nhờ tầng dữ liệu lưu lại.
@@ -98,7 +100,11 @@ class NotificationCapture {
 
     final packageName = event.packageName;
     if (packageName.isEmpty) return;
-    if (packageName.startsWith('com.trustsoft.tingting')) return;
+    // Thông báo của chính app không phải giao dịch — thả vào đây thì mỗi thông
+    // báo giao dịch lại đẻ ra một giao dịch mới. Ngoại lệ duy nhất là thông báo
+    // thử, thứ sinh ra để chứng minh đúng con đường này còn thông.
+    final isTest = _isTestNotification(event);
+    if (packageName.startsWith(appPackage) && !isTest) return;
 
     final title = event.title;
     final content = event.content;
@@ -120,6 +126,10 @@ class NotificationCapture {
         parsed: false,
       ),
     );
+
+    // Thông báo thử xong việc ngay khi vào được nhật ký. Đi tiếp nữa là ghi
+    // chính app này vào bảng ngân hàng và nhét một giao dịch bịa vào sổ.
+    if (isTest) return;
 
     if (parsed == null) return;
 
@@ -143,6 +153,13 @@ class NotificationCapture {
       notify: notify,
     );
   }
+
+  /// Thông báo thử do chính app bắn ra. Id là dấu hiệu duy nhất phân biệt nó
+  /// với thông báo giao dịch, nên phải xét kèm cả tên package: app khác hoàn
+  /// toàn có thể dùng trùng con số đó.
+  bool _isTestNotification(ServiceNotificationEvent event) =>
+      event.id == TestNotification.notificationId &&
+      event.packageName.startsWith(appPackage);
 
   /// Trả về `true` nếu giao dịch được ghi mới (không phải bản trùng).
   Future<bool> _importTxn({

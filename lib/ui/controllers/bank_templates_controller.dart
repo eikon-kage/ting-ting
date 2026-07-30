@@ -1,10 +1,39 @@
+import '../../core/app_id.dart';
 import '../../domain/bank_names.dart';
+import '../../domain/bank_parser.dart';
 import '../../domain/notification_privacy.dart';
 import '../../models/models.dart';
 import '../../services/capture_service.dart';
 import '../../services/notification_capture.dart';
 import '../../services/summary_widget.dart';
+import '../../services/test_notification.dart';
 import 'base_controller.dart';
+
+/// Kết quả một lần bắn thông báo thử. Mỗi giá trị là một mắt xích khác nhau
+/// của đường đọc thông báo, nên màn hình có thể chỉ đúng chỗ đang hỏng thay vì
+/// nói chung chung là "không đọc được".
+enum CaptureTestResult {
+  /// Thông báo quay về tới nhật ký và parser đọc ra được số tiền — đủ đường.
+  parsed,
+
+  /// Về tới nơi nhưng Android đã thay nội dung bằng câu báo ẩn.
+  redacted,
+
+  /// Về tới nơi mà parser không tìm ra số tiền nào trong đó.
+  unparsed,
+
+  /// Bắn ra rồi nhưng không bao giờ quay lại.
+  missed,
+
+  /// Chưa được cấp quyền đọc thông báo — chưa bắn gì cả.
+  noPermission,
+
+  /// Theo dõi nền đang tắt, không có ai nghe — chưa bắn gì cả.
+  notCapturing,
+
+  /// Không phải Android.
+  unsupported,
+}
 
 /// Một app gửi thông báo, nhìn từ màn cấu hình ngân hàng.
 class BankTemplateEntry {
@@ -49,6 +78,12 @@ class BankTemplatesController extends BaseController {
     CaptureService? service,
   }) : _capture = capture ?? NotificationCapture.instance,
        _service = service ?? CaptureService.instance;
+
+  /// Chờ thông báo thử quay lại lâu nhất chừng này. Đường đi qua service của
+  /// hệ thống nên gần như tức thì, nhưng máy đang bận thì có thể chậm vài giây.
+  static const Duration _testTimeout = Duration(seconds: 8);
+
+  static const Duration _testPollPeriod = Duration(milliseconds: 300);
 
   final NotificationCapture _capture;
   final CaptureService _service;
@@ -95,6 +130,49 @@ class BankTemplatesController extends BaseController {
   /// launcher từ chối — lúc đó chỉ còn cách thêm tay từ khay widget.
   Future<bool> pinWidget() => _widget.pin();
 
+  /// Bắn một thông báo giả rồi chờ xem nó có đi trọn đường về nhật ký không.
+  ///
+  /// Hai mắt xích đầu hỏi thẳng được nên chặn ngay từ đây: chưa cấp quyền hoặc
+  /// theo dõi nền đang tắt thì thông báo chắc chắn không quay lại, mà bắn ra
+  /// rồi báo "không đọc được" là đổ oan cho phần đang chạy tốt.
+  Future<CaptureTestResult> runCaptureTest() async {
+    if (!_capture.supported) return CaptureTestResult.unsupported;
+    if (!await _capture.isPermissionGranted()) {
+      return CaptureTestResult.noPermission;
+    }
+    _capturing = await _service.running;
+    notify();
+    if (!_capturing) return CaptureTestResult.notCapturing;
+
+    final sentAt = await TestNotification.instance.send();
+    final log = await _awaitTestLog(sentAt);
+    if (log == null) return CaptureTestResult.missed;
+    if (isRedactedNotification(log.content)) return CaptureTestResult.redacted;
+    return BankParser.parse(log.title, log.content) == null
+        ? CaptureTestResult.unparsed
+        : CaptureTestResult.parsed;
+  }
+
+  /// Chờ thông báo thử hiện ra trong nhật ký.
+  ///
+  /// Phải hỏi lại database chứ không nghe sự kiện: việc nhận thông báo diễn ra
+  /// trong isolate của foreground service, isolate này chỉ thấy được nó qua
+  /// những gì bên kia đã ghi xuống.
+  Future<RawLog?> _awaitTestLog(DateTime sentAt) async {
+    final deadline = DateTime.now().add(_testTimeout);
+    while (DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(_testPollPeriod);
+      final logs = await data.rawLogs.forPackage(appPackage);
+      for (final log in logs) {
+        if (log.title == TestNotification.title &&
+            !log.postTime.isBefore(sentAt)) {
+          return log;
+        }
+      }
+    }
+    return null;
+  }
+
   /// Bật hoặc tắt hẳn việc theo dõi nền.
   Future<void> setCapturing({required bool enabled}) async {
     if (enabled) {
@@ -121,6 +199,9 @@ class BankTemplatesController extends BaseController {
       ...byPackage.keys,
       ...packages.map((p) => p.packageName),
     };
+    // Thông báo thử ghi một dòng nhật ký mang tên package của chính app. Nó chỉ
+    // để chẩn đoán, đừng để Ting Ting hiện ra như một ngân hàng chờ bật.
+    names.removeWhere((packageName) => packageName.startsWith(appPackage));
     final activity = {for (final p in packages) p.packageName: p};
 
     final entries = [

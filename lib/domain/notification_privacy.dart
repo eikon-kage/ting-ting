@@ -1,3 +1,5 @@
+import '../core/app_id.dart';
+
 /// Android 15 giấu nội dung những thông báo bị coi là "nhạy cảm" (mã OTP, biến
 /// động số dư...) với mọi app đọc thông báo không được cấp quyền riêng. App
 /// nhận được đúng một câu thay thế, không còn số tiền lẫn nội dung.
@@ -16,7 +18,7 @@ const List<String> _redactedMarkers = [
   'noi dung nhay cam da bi an',
 ];
 
-const String sensitiveNotificationsPackage = 'com.trustsoft.tingting';
+const String sensitiveNotificationsPackage = appPackage;
 
 /// Lệnh cấp quyền qua adb — cách duy nhất hiện có, Android không cho app tự xin.
 ///
