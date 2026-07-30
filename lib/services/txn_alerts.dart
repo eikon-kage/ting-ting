@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui' show DartPluginRegistrant;
+import 'dart:ui' show Color, DartPluginRegistrant;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -22,6 +22,9 @@ class AlertAction {
 
 const String _channelId = 'txn_alerts';
 const String _channelName = 'Giao dịch mới';
+
+/// Màu accent của thông báo, trùng `primary` của scheme tối trong app.
+const Color _accent = Color(0xFF5B9CD6);
 
 /// Thông báo xác nhận đã lưu ghi chú nằm lại chừng này rồi tự tắt.
 const int _confirmTimeoutMs = 6000;
@@ -54,8 +57,10 @@ class TxnAlerts {
   /// không có activity nào để xin quyền, và cũng không có màn hình nào để mở.
   Future<void> init({bool background = false}) async {
     if (_ready || !Platform.isAndroid) return;
+    // Icon silhouette chứ không phải icon launcher: small icon chỉ được đọc
+    // kênh alpha, ảnh đục kín nền sẽ ra một ô vuông trắng trên thanh trạng thái.
     const settings = InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      android: AndroidInitializationSettings('@drawable/ic_stat_tingting'),
     );
     await _plugin.initialize(
       settings: settings,
@@ -177,6 +182,8 @@ Future<void> _showAlert(
     _channelName,
     importance: Importance.defaultImportance,
     priority: Priority.defaultPriority,
+    // Màu tô icon trên thanh trạng thái — `primary` của scheme tối.
+    color: _accent,
     actions: const [
       AndroidNotificationAction(
         AlertAction.note,
@@ -221,6 +228,7 @@ Future<void> _confirmNote(
     _channelName,
     importance: Importance.defaultImportance,
     priority: Priority.defaultPriority,
+    color: _accent,
     // Chỉ là lời xác nhận, đừng kêu thêm lần nữa.
     silent: true,
     onlyAlertOnce: true,

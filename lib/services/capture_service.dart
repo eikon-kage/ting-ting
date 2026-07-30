@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show Color;
 
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
@@ -15,8 +16,10 @@ import 'txn_alerts.dart';
 /// Foreground service giữ một engine riêng, độc lập với màn hình, nên luồng
 /// còn nguyên.
 ///
-/// Đổi lại phải chịu một thông báo thường trực — Android bắt buộc, không tắt
-/// được. Thực ra cũng tiện: nó là đèn báo app còn sống hay đã bị hệ thống giết.
+/// The cost is a permanent notification. Android requires one for a foreground
+/// service and there is no flag that removes it, so the channel runs at MIN
+/// instead: no status bar icon, and the notification sits below the fold in the
+/// shade where nothing has to look at it.
 class CaptureService {
   CaptureService._();
 
@@ -24,6 +27,20 @@ class CaptureService {
 
   static const int _serviceId = 2601;
   static const String _stopButtonId = 'stop_capture';
+
+  static const String _notificationTitle = 'Đang theo dõi thông báo ngân hàng';
+  static const String _notificationText = 'Giao dịch vẫn được ghi khi app đóng';
+
+  /// Bỏ trống thì plugin lấy icon launcher, mà small icon chỉ được đọc kênh
+  /// alpha — icon launcher đục kín nền nên hoá ra một ô vuông trắng.
+  static const NotificationIcon _notificationIcon = NotificationIcon(
+    metaDataName: 'com.trustsoft.tingting.NOTIFICATION_ICON',
+    backgroundColor: Color(0xFF5B9CD6),
+  );
+
+  static const List<NotificationButton> _notificationButtons = [
+    NotificationButton(id: _stopButtonId, text: 'Tắt'),
+  ];
 
   /// User có muốn theo dõi nền hay không. Phải nhớ được qua các lần mở app,
   /// nếu không thì bấm "Tắt" xong mở app cái nó bật lại ngay.
@@ -43,12 +60,19 @@ class CaptureService {
   void configure() {
     FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
-        channelId: 'capture_service',
+        // New channel id on purpose. Importance is locked when the channel is
+        // first created and later writes are ignored, so reusing
+        // `capture_service` would leave every existing install on LOW and the
+        // status bar icon would stay exactly where it was.
+        channelId: 'capture_service_quiet',
         channelName: 'Theo dõi thông báo',
         channelDescription:
             'Thông báo thường trực cho biết app đang đọc thông báo ngân hàng',
-        channelImportance: NotificationChannelImportance.LOW,
-        priority: NotificationPriority.LOW,
+        // MIN keeps the notification out of the status bar and drops it below
+        // the fold in the shade. A foreground service has to post something —
+        // this is as close to invisible as Android allows.
+        channelImportance: NotificationChannelImportance.MIN,
+        priority: NotificationPriority.MIN,
         onlyAlertOnce: true,
       ),
       iosNotificationOptions: const IOSNotificationOptions(
@@ -106,17 +130,28 @@ class CaptureService {
   Future<bool> start() async {
     if (!supported) return false;
     configure();
-    if (await FlutterForegroundTask.isRunningService) return true;
+    if (await FlutterForegroundTask.isRunningService) {
+      // Cài đè app hay khởi động máy thì hệ thống dựng lại service bằng tuỳ
+      // chọn đã lưu từ bản trước, và nhánh này thoát sớm nên bản mới đổi icon
+      // hay đổi chữ sẽ không hiện gì cho tới khi user tự tắt bật lại. Đẩy lại
+      // tuỳ chọn hiện tại ngay đây.
+      await FlutterForegroundTask.updateService(
+        notificationTitle: _notificationTitle,
+        notificationText: _notificationText,
+        notificationIcon: _notificationIcon,
+        notificationButtons: _notificationButtons,
+      );
+      return true;
+    }
     final result = await FlutterForegroundTask.startService(
       serviceId: _serviceId,
       // Android 14+ bắt khai loại. Không có loại nào dành cho việc đọc thông
       // báo nên specialUse là chỗ duy nhất đúng.
       serviceTypes: const [ForegroundServiceTypes.specialUse],
-      notificationTitle: 'Đang theo dõi thông báo ngân hàng',
-      notificationText: 'Giao dịch vẫn được ghi khi app đóng',
-      notificationButtons: const [
-        NotificationButton(id: _stopButtonId, text: 'Tắt'),
-      ],
+      notificationTitle: _notificationTitle,
+      notificationText: _notificationText,
+      notificationIcon: _notificationIcon,
+      notificationButtons: _notificationButtons,
       callback: startCaptureTask,
     );
     return result is ServiceRequestSuccess;

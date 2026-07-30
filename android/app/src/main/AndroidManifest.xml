@@ -28,6 +28,11 @@
         android:label="Ting Ting"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Icon thanh trạng thái của thông báo thường trực. flutter_foreground_task
+             đọc drawable qua tên meta-data này chứ không nhận thẳng tên resource. -->
+        <meta-data
+            android:name="com.trustsoft.tingting.NOTIFICATION_ICON"
+            android:resource="@drawable/ic_stat_tingting" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
