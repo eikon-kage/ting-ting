@@ -24,9 +24,13 @@
         android:name="android.permission.RECEIVE_SENSITIVE_NOTIFICATIONS"
         tools:ignore="ProtectedPermissions" />
 
+    <!-- android:name is our own Application rather than the "${applicationName}"
+         placeholder, which resolves to plain android.app.Application. See
+         TingTingApplication: it is the only hook that still runs after HyperOS
+         SIGKILLs the process on a recents swipe. -->
     <application
         android:label="Ting Ting"
-        android:name="${applicationName}"
+        android:name=".TingTingApplication"
         android:icon="@mipmap/ic_launcher">
         <!-- Icon thanh trạng thái của thông báo thường trực. flutter_foreground_task
              đọc drawable qua tên meta-data này chứ không nhận thẳng tên resource. -->
@@ -95,6 +99,21 @@
         <service
             android:name="notification.listener.service.NotificationListener"
             android:label="Đọc thông báo ngân hàng"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- The listener that survives a recents swipe. The plugin's one above
+             only reaches Dart through a live Flutter engine, so it goes deaf the
+             moment HyperOS kills the process; this one is bound by the system and
+             writes to disk. See BankNotificationListener. Both are listed under
+             Notification access and both should be on. -->
+        <service
+            android:name=".BankNotificationListener"
+            android:label="Ting Ting — ghi sổ thu chi"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
             android:exported="true">
             <intent-filter>

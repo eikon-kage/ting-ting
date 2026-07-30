@@ -189,7 +189,15 @@ class CaptureTaskHandler extends TaskHandler {
 
   @override
   void onRepeatEvent(DateTime timestamp) {
-    unawaited(NotificationCapture.instance.syncActiveNotifications());
+    unawaited(_catchUp());
+  }
+
+  /// Hàng đợi trước, thanh trạng thái sau. Thứ tự này quan trọng: hàng đợi giữ
+  /// nguyên nội dung lúc thông báo vừa đến, còn thông báo bị user xoá khỏi
+  /// thanh trạng thái thì lần quét kia không còn thấy nữa.
+  Future<void> _catchUp() async {
+    await NotificationCapture.instance.drainQueued();
+    await NotificationCapture.instance.syncActiveNotifications();
   }
 
   @override

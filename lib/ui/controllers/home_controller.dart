@@ -179,6 +179,10 @@ class HomeController extends BaseController {
       notify();
     }
     if (granted) await service.ensureRunning();
+    // Vét hàng đợi của listener native ngay cả khi service đang chạy sẵn:
+    // `ensureRunning` thoát sớm ở trường hợp đó, mà đây thường là lần đầu có
+    // engine Dart sống lại sau khi app bị vuốt khỏi recents.
+    if (granted) await capture.drainQueued();
   }
 
   Future<void> requestPermission() async {

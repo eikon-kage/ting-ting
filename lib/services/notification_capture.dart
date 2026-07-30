@@ -13,6 +13,8 @@ import '../domain/bank_names.dart';
 import '../domain/bank_parser.dart';
 import '../domain/txn_factory.dart';
 import '../models/models.dart';
+import 'notification_event_mapping.dart';
+import 'pending_notifications.dart';
 import 'test_notification.dart';
 import 'txn_alerts.dart';
 
@@ -56,7 +58,30 @@ class NotificationCapture {
       onError: (Object e) => debugPrint('notification stream error: $e'),
     );
     await _data.rawLogs.prune();
+    await drainQueued();
     await syncActiveNotifications();
+  }
+
+  /// Xử lý những thông báo mà listener native đã kịp ghi ra đĩa lúc không có
+  /// engine Dart nào sống.
+  ///
+  /// Đây là đường duy nhất cứu được thông báo đến sau khi user vuốt app khỏi
+  /// recents: HyperOS giết process, foreground service không dựng lại được, nên
+  /// luồng trực tiếp của plugin không còn ai nghe. Xem [PendingNotifications].
+  Future<void> drainQueued() async {
+    if (!supported) return;
+    final queued = await PendingNotifications.instance.drain();
+    if (queued.isEmpty) return;
+    final cutoff = DateTime.now().subtract(_freshWindow);
+    for (final event in queued) {
+      final postTime = event.timestamp > 0
+          ? DateTime.fromMillisecondsSinceEpoch(event.timestamp)
+          : null;
+      await _handle(
+        event,
+        notify: postTime != null && postTime.isAfter(cutoff),
+      );
+    }
   }
 
   Future<void> stop() async {
@@ -71,7 +96,7 @@ class NotificationCapture {
   /// hệ thống ngắt kết nối service đọc thông báo mà không báo gì.
   Future<void> syncActiveNotifications() async {
     try {
-      final active = await NotificationListenerService.getActiveNotifications();
+      final active = await _activeNotifications();
       final cutoff = DateTime.now().subtract(_freshWindow);
       for (final event in active) {
         // Giao dịch vừa xảy ra thì vẫn bắn thông báo — đây đúng là trường hợp
@@ -88,6 +113,23 @@ class NotificationCapture {
     } catch (e) {
       debugPrint('backfill failed: $e');
     }
+  }
+
+  /// What is still sitting on the status bar.
+  ///
+  /// Not `NotificationListenerService.getActiveNotifications()`: its native
+  /// side omits the `haveExtraPicture` key on this path, and
+  /// `ServiceNotificationEvent.fromMap` assigns that key straight into a
+  /// non-nullable `bool`. Every row therefore throws "type 'Null' is not a
+  /// subtype of type 'bool'", the plugin only catches `PlatformException`, and
+  /// the whole list dies on its first element — [syncActiveNotifications] never
+  /// recovered a single notification, it just logged `backfill failed` each
+  /// time. Read the channel directly and build the events here instead.
+  Future<List<ServiceNotificationEvent>> _activeNotifications() async {
+    final raw = await methodeChannel.invokeMethod<List<dynamic>>(
+      'getActiveNotifications',
+    );
+    return notificationEventsFrom(raw);
   }
 
   Future<void> _handle(
@@ -217,11 +259,7 @@ class NotificationCapture {
     final profile = await _data.parserProfiles.byPackage(source.packageName);
     var imported = 0;
     for (final log in logs) {
-      final parsed = BankParser.parse(
-        log.title,
-        log.content,
-        profile: profile,
-      );
+      final parsed = BankParser.parse(log.title, log.content, profile: profile);
       if (parsed == null) continue;
       final created = await _importTxn(
         packageName: log.packageName,
