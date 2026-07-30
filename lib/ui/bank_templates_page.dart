@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/app_id.dart';
 import '../domain/notification_privacy.dart';
 import '../services/notification_capture.dart';
 import 'bank_template_page.dart';
@@ -448,10 +449,14 @@ String _captureTestMessage(CaptureTestResult result) => switch (result) {
     'Thông báo thử đã bắn ra nhưng không quay lại app. Quyền và theo dõi nền '
         'đều đang bật, nên nhiều khả năng hệ thống đã ngắt kết nối service đọc '
         'thông báo mà không báo gì: tắt rồi bật lại quyền của Ting Ting trong '
-        'Cài đặt là nối lại được.',
+        'Cài đặt là nối lại được. Nhân tiện xem luôn mục '
+        '"$backupListenerName" ở màn hình đó có đang bật không — thiếu nó thì '
+        'vuốt app khỏi recents là mất thông báo.',
   CaptureTestResult.noPermission =>
-    'Bật "Ting Ting" trong Cài đặt > Quyền truy cập thông báo rồi thử lại. '
-        'Chưa có quyền này thì app không nhận được thông báo nào cả.',
+    'Vào Cài đặt > Quyền truy cập thông báo, bật CẢ HAI mục của Ting Ting — '
+        '"$captureListenerName" và "$backupListenerName" — rồi thử lại. Mục '
+        'đầu để app nhận thông báo lúc đang chạy, mục sau để không mất thông '
+        'báo sau khi app bị đóng.',
   CaptureTestResult.notCapturing =>
     'Bật theo dõi nền ở ô đầu màn hình này rồi thử lại — chính nó là thứ nghe '
         'thông báo, tắt đi thì không còn ai nghe.',

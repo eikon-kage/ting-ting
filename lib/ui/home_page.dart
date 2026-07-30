@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../core/app_id.dart';
 import '../models/models.dart';
 import '../services/txn_alerts.dart';
 import 'add_txn_page.dart';
@@ -1206,8 +1207,10 @@ class _PermissionBanner extends StatelessWidget {
       icon: Icons.notifications_off_rounded,
       title: 'Chưa có quyền đọc thông báo',
       message:
-          'Bật "Ting Ting" trong Cài đặt > Quyền truy cập thông báo để app tự '
-          'ghi giao dịch.',
+          'Vào Cài đặt > Quyền truy cập thông báo và bật CẢ HAI mục của Ting '
+          'Ting: "$captureListenerName" và "$backupListenerName". Bật một cái '
+          'thôi thì app ghi được giao dịch lúc đang mở, nhưng vuốt app khỏi '
+          'recents là mất.',
       background: background,
       foreground: foreground,
       action: FilledButton.icon(
