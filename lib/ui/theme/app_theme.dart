@@ -11,7 +11,7 @@ import 'package:flutter/material.dart';
 /// closely for a background:
 ///
 /// - the `surface` family comes out tinted in both — see [_neutralSurfaces]
-///   for the light cream ramp and [_blackSurfaces] for the black one;
+///   for the light cream ramp and [_darkSurfaces] for the dark one;
 /// - `primaryContainer` comes out as the raw seed — see
 ///   [_tintedPrimaryContainer], which also swaps the dark scheme's accents to
 ///   trustybot's blue.
@@ -89,7 +89,7 @@ class AppTheme {
 
   static ThemeData dark() => _build(
     _tintedPrimaryContainer(
-      _blackSurfaces(
+      _darkSurfaces(
         ColorScheme.fromSeed(
           seedColor: brand,
           brightness: Brightness.dark,
@@ -99,46 +99,46 @@ class AppTheme {
     ),
   );
 
-  /// Replaces the dark scheme's `surface` family with a black, neutral ramp.
+  /// Replaces the dark scheme's `surface` family with trustybot's dark ramp.
   ///
   /// `fidelity` pulls the dark neutrals toward the seed just as it does the
   /// light ones, so `surface` lands on `#1D100A` and the raised containers on
   /// `#362720`. Those are browns. On a phone they read as a tinted screen
   /// rather than as an app with a dark background.
   ///
-  /// The ramp below is black at the bottom with neutral, very slightly cool
-  /// steps above it — blue leads red by 2–6/255. That coolness is deliberate
-  /// and is the opposite of the light scheme, where the ramp is warm: this is
-  /// what a dark finance app looks like, and warmth that reads as "cream" on
-  /// white reads as "stained" on black.
+  /// The three anchors come from `darkColors` in trustybot-mobile's
+  /// `src/shared/theme/themes.ts`: `background` `#0E1116` is the base,
+  /// `surface` `#1A1F26` the mid container, `border` `#2A3038` the top of the
+  /// ramp. The remaining steps interpolate between them, so the whole family
+  /// holds one hue — a cool blue-grey where blue leads red by 8–14/255. That
+  /// coolness is the opposite of the light scheme, where the ramp is warm:
+  /// warmth that reads as "cream" on white reads as "stained" on dark.
   ///
-  /// True `#000000` at the base rather than a near-black: it costs nothing,
-  /// switches off OLED pixels, and gives the raised containers somewhere to
-  /// step up from. Cards, sheets and the navigation bar all sit on
-  /// `surfaceContainerLow`, so they lift off the background by fill; the card
-  /// border is left as a hairline against black rather than a drawn edge.
+  /// The base used to be true `#000000`, for OLED. Lifting it to `#0E1116`
+  /// gives up that power saving and buys back the shadows: against pure black
+  /// the elevation ramp only reads by fill, and a card sitting one step up was
+  /// a rectangle appearing out of nothing. Cards, sheets and the navigation bar
+  /// all sit on `surfaceContainerLow`, which now has somewhere to sit.
   ///
-  /// Only the surface roles. The warm accents that sit on this ramp are set in
-  /// [_tintedPrimaryContainer]. Orange on neutral black is the contrast that
-  /// carries the brand here; matching the background to the accent is what made
-  /// the old scheme look brown.
+  /// Only the surface roles. The accents on this ramp are set in
+  /// [_tintedPrimaryContainer], which takes trustybot's blue.
   ///
-  /// Contrast: `onSurface` 18.79:1, `onSurfaceVariant` 10.66:1 on the base and
-  /// 7.53:1 on `surfaceContainerHighest`. The chart colours hold up unchanged —
-  /// income 10.76:1, expense 9.04:1 against black.
-  static ColorScheme _blackSurfaces(ColorScheme scheme) => scheme.copyWith(
-    surface: const Color(0xFF000000),
-    surfaceDim: const Color(0xFF000000),
-    surfaceBright: const Color(0xFF2A2A2E),
-    surfaceContainerLowest: const Color(0xFF000000),
-    surfaceContainerLow: const Color(0xFF121215),
-    surfaceContainer: const Color(0xFF17171B),
-    surfaceContainerHigh: const Color(0xFF1F1F24),
-    surfaceContainerHighest: const Color(0xFF27272D),
-    onSurface: const Color(0xFFF2F2F5),
-    onSurfaceVariant: const Color(0xFFB8B8C0),
-    outline: const Color(0xFF7A7A85),
-    outlineVariant: const Color(0xFF33333A),
+  /// Contrast on the base: `onSurface` 15.4:1, `onSurfaceVariant` 7.7:1, and
+  /// 5.4:1 where the variant sits on `surfaceContainerHighest` — all clear of
+  /// AA. The chart colours hold up: income 9.7:1, expense 8.1:1.
+  static ColorScheme _darkSurfaces(ColorScheme scheme) => scheme.copyWith(
+    surface: const Color(0xFF0E1116),
+    surfaceDim: const Color(0xFF0A0D11),
+    surfaceBright: const Color(0xFF2E353F),
+    surfaceContainerLowest: const Color(0xFF0A0D11),
+    surfaceContainerLow: const Color(0xFF141922),
+    surfaceContainer: const Color(0xFF1A1F26),
+    surfaceContainerHigh: const Color(0xFF222831),
+    surfaceContainerHighest: const Color(0xFF2A3038),
+    onSurface: const Color(0xFFE6E8EB),
+    onSurfaceVariant: const Color(0xFFA0A6AD),
+    outline: const Color(0xFF79818C),
+    outlineVariant: const Color(0xFF2A3038),
   );
 
   /// Softens `primaryContainer` into a pale tint of the brand orange.
@@ -186,12 +186,13 @@ class AppTheme {
   /// Picking the shade was forced. `primary` is both the fill behind the FAB
   /// and filled buttons *and* a text colour for app bar icons, the focused
   /// field border and the selected navigation label. Those two jobs pull in
-  /// opposite directions on black, and the scale cannot satisfy both:
+  /// opposite directions on the dark surface, and the scale cannot satisfy
+  /// both:
   ///
-  /// - `#2B5ED4` (650) carries white text at 5.75:1, but as a label on black it
-  ///   is 3.65:1 — under AA.
-  /// - `#5B9CD6` (500) reads 7.17:1 on black, but white on it is 2.93:1 — well
-  ///   under AA.
+  /// - `#2B5ED4` (650) carries white text at 5.75:1, but as a label on `surface`
+  ///   it is 3.29:1 — under AA.
+  /// - `#5B9CD6` (500) reads 6.46:1 on `surface`, but white on it is 2.93:1 —
+  ///   well under AA.
   ///
   /// So 500 for the role and a dark navy for its foreground: `#08172B` gives
   /// 6.14:1 on the fill. Same trade the orange version made, same resolution.
@@ -213,8 +214,8 @@ class AppTheme {
   /// which is the same stain that `#5C3620` produced in
   /// [_tintedPrimaryContainer]. The fix is the rule that section already
   /// establishes — lift the fill one step off the surface ramp and let the
-  /// foreground carry the hue. `#2E2614` is that lift with a warm cast, 1.40:1
-  /// off black, and `NoticeBanner` adds a border at 20% of the foreground.
+  /// foreground carry the hue. `#2E2614` is that lift with a warm cast, 1.26:1
+  /// off `surface`, and `NoticeBanner` adds a border at 20% of the foreground.
   ///
   /// The amber then reads at 9.31:1, so the warning is loud where it should be
   /// — in the icon and the words — and quiet where a large fill would only be
