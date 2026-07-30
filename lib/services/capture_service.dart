@@ -5,6 +5,7 @@ import 'dart:ui' show Color;
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 import 'notification_capture.dart';
+import 'summary_widget.dart';
 import 'txn_alerts.dart';
 
 /// Nuôi việc nghe thông báo trong một isolate riêng do foreground service giữ.
@@ -184,6 +185,7 @@ class CaptureTaskHandler extends TaskHandler {
       return;
     }
     await TxnAlerts.instance.init(background: true);
+    await SummaryWidget.instance.init(background: true);
     await NotificationCapture.instance.start();
   }
 
@@ -203,6 +205,7 @@ class CaptureTaskHandler extends TaskHandler {
   @override
   Future<void> onDestroy(DateTime timestamp, bool isTimeout) async {
     await NotificationCapture.instance.stop();
+    await SummaryWidget.instance.dispose();
   }
 
   @override

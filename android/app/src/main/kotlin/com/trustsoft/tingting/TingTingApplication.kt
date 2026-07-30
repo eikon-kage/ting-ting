@@ -4,7 +4,11 @@ import android.app.Application
 import android.content.ComponentName
 import android.service.notification.NotificationListenerService
 import android.util.Log
+import com.pravera.flutter_foreground_task.FlutterForegroundTaskLifecycleListener
+import com.pravera.flutter_foreground_task.FlutterForegroundTaskPlugin
+import com.pravera.flutter_foreground_task.FlutterForegroundTaskStarter
 import com.pravera.flutter_foreground_task.service.RestartReceiver
+import io.flutter.embedding.engine.FlutterEngine
 
 /**
  * Runs on every process start and re-arms the two things HyperOS tears down
@@ -28,8 +32,43 @@ class TingTingApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         Log.i(TAG, "process created, re-arming capture")
+        serveWidgetChannelInTheService()
         scheduleServiceRestart()
         requestListenerRebind()
+    }
+
+    /**
+     * Gives the capture isolate the same widget channel the activity has.
+     *
+     * The service creates its own FlutterEngine, and that engine only gets the
+     * plugins the generated registrant knows about — a channel wired up by hand
+     * in [MainActivity] is not among them. Registering the listener here rather
+     * than at the call site is what makes it early enough: the engine is built
+     * when the service starts, which on a restart after a swipe happens well
+     * before any Dart code of ours has run.
+     */
+    private fun serveWidgetChannelInTheService() {
+        FlutterForegroundTaskPlugin.addTaskLifecycleListener(
+            object : FlutterForegroundTaskLifecycleListener {
+                private var channel: WidgetChannel? = null
+
+                override fun onEngineCreate(flutterEngine: FlutterEngine?) {
+                    val messenger = flutterEngine?.dartExecutor?.binaryMessenger ?: return
+                    channel = WidgetChannel(applicationContext).also { it.attach(messenger) }
+                }
+
+                override fun onEngineWillDestroy() {
+                    channel?.detach()
+                    channel = null
+                }
+
+                override fun onTaskStart(starter: FlutterForegroundTaskStarter) = Unit
+
+                override fun onTaskRepeatEvent() = Unit
+
+                override fun onTaskDestroy() = Unit
+            }
+        )
     }
 
     /**

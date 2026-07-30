@@ -32,11 +32,20 @@ class SummaryWidget {
   bool get supported => Platform.isAndroid;
 
   /// Gọi một lần lúc khởi động: đẩy số hiện tại rồi bám theo mọi thay đổi.
-  Future<void> init() async {
+  ///
+  /// Pass `background: true` from the foreground service's isolate. It has to
+  /// run there too — a transaction read out of a bank notification while the
+  /// app is closed is written by that isolate, and the screen's copy of this
+  /// class is not around to hear about it. What it skips there is the lifecycle
+  /// watch: the service's engine has no activity attached to it, so it never
+  /// resumes and the listener would only ever sit idle.
+  Future<void> init({bool background = false}) async {
     if (!supported) return;
     _data.changes.addListener(refresh);
-    // Mở lại app sau vài ngày thì "tháng này" đã là tháng khác — đẩy lại số.
-    _lifecycle ??= AppLifecycleListener(onResume: refresh);
+    if (!background) {
+      // Mở lại app sau vài ngày thì "tháng này" đã là tháng khác — đẩy lại số.
+      _lifecycle ??= AppLifecycleListener(onResume: refresh);
+    }
     await refresh();
   }
 
