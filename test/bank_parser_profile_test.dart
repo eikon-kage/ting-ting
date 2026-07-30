@@ -48,7 +48,8 @@ void main() {
   group('mẫu riêng của user', () {
     test('nhãn user khai đè lên cách dò mặc định', () {
       // Thông báo cố tình để số tài khoản có đuôi "d" đứng trước số tiền.
-      const content = 'Phi thuong nien 199000d\nGiao dich: 250.000 VND';
+      const content =
+          'Ghi no: Phi thuong nien 199000d\nGiao dich: 250.000 VND';
       final profile = ParserProfile(
         packageName: 'com.demo',
         amountLabel: 'Giao dich',
@@ -69,7 +70,7 @@ void main() {
       );
       final result = BankParser.parse(
         'Ví X',
-        'SO TIEN GIAO DICH: 12.000 VND\nSO DU: 88.000 VND',
+        'THANH TOAN\nSO TIEN GIAO DICH: 12.000 VND\nSO DU: 88.000 VND',
         profile: profile,
       );
 
@@ -85,7 +86,7 @@ void main() {
       );
       final result = BankParser.parse(
         'Bank',
-        'Số tiền: 1.000VND — thay đổi 777.000 VND',
+        'Ghi no. Số tiền: 1.000VND — thay đổi 777.000 VND',
         profile: profile,
       );
 

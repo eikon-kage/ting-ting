@@ -62,11 +62,41 @@ void main() {
       expect(result.amount, 500000);
     });
 
-    test('cắm cờ khi không đoán được hướng tiền', () {
-      final result = BankParser.parse('Ngân hàng X', 'Giao dich 100.000 VND');
+    test('bỏ qua số tiền không kèm dấu +/- lẫn từ khoá hướng tiền', () {
+      // An amount alone says nothing about money moving. Guessing "expense" and
+      // flagging it for review turned every promo and receipt-shaped message
+      // into a transaction the user had to go and delete.
+      expect(BankParser.parse('Ngân hàng X', 'Giao dich 100.000 VND'), isNull);
+      expect(BankParser.parse('Shop', 'Giảm giá 50.000đ cho đơn sau'), isNull);
+    });
 
+    test('vẫn ghi nhận khi từ khoá hai phía cùng khớp, chỉ cắm cờ hỏi lại', () {
+      // Conflicting evidence is still evidence: money moved, the direction is
+      // what's unclear. Only the no-evidence-at-all case gets dropped.
+      final result = BankParser.parse(
+        'Ngân hàng X',
+        'Ghi co tien thanh toan 100.000 VND',
+      );
+
+      expect(result, isNotNull);
       expect(result!.amount, 100000);
       expect(result.directionConfident, isFalse);
+    });
+
+    test('mẫu bóc tách khai sẵn hướng tiền thì không cần dấu +/-', () {
+      final result = BankParser.parse(
+        'Ngân hàng X',
+        'Giao dich 100.000 VND',
+        profile: const ParserProfile(
+          packageName: 'com.bank.x',
+          directionMode: DirectionMode.alwaysExpense,
+        ),
+      );
+
+      expect(result, isNotNull);
+      expect(result!.amount, 100000);
+      expect(result.direction, TxnDirection.expense);
+      expect(result.directionConfident, isTrue);
     });
 
     test('bỏ qua thông báo không có tiền', () {
@@ -79,6 +109,14 @@ void main() {
         BankParser.parse('OTP', 'Ma xac thuc cua ban la 483920'),
         isNull,
       );
+    });
+
+    test('không đọc "đ" đứng đầu từ tiếng Việt thành đơn vị tiền', () {
+      // The unit is one bare "đ", so "đơn", "đường", "đồ" used to end an amount
+      // match and the number in front of them became a transaction.
+      expect(BankParser.parse('Shopee', 'Bạn có 3 đơn hàng mới'), isNull);
+      expect(BankParser.parse('Grab', 'Tài xế đã đến 2 đường Nguyễn Trãi'), isNull);
+      expect(BankParser.parse('Shop', 'Còn 5 đồ chưa lấy'), isNull);
     });
   });
 

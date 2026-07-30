@@ -34,10 +34,16 @@ class BankParser {
   static const String _number = r'\d{1,3}(?:[.,]\d{3})+|\d+';
 
   /// Số tiền kèm đơn vị: "1.234.567 VND", "50,000đ", "100000 d", "12.000 đồng".
+  ///
+  /// The unit must not be followed by another letter or digit, or the bare "đ"
+  /// swallows the first letter of a Vietnamese word and any number in front of
+  /// it becomes an amount: "3 đơn hàng mới" read as 3 đồng, "2 đường Nguyễn
+  /// Trãi" as 2 đồng. Excluding `[a-zA-Z0-9]` was not enough — "ơ" and "ư" are
+  /// not ASCII, so exactly the words that start "đ" + diacritic slipped through.
   static final RegExp _defaultAmountRe = _compile(
     r'(?<sign>[+\-])?\s*(?<num>' +
         _number +
-        r')\s*(?:vnđ|vnd|đồng|đ|d)(?![a-zA-Z0-9])',
+        r')\s*(?:vnđ|vnd|đồng|đ|d)(?![\p{L}\p{N}])',
   )!;
 
   /// Số dư sau giao dịch: "SD: 1,234,567VND", "Số dư: 1.234.567".
@@ -90,8 +96,9 @@ class BankParser {
     'purchase',
   ];
 
-  /// Trả về `null` nếu notification không phải giao dịch (không tìm ra số tiền,
-  /// hoặc bị bộ lọc của [profile] loại ra).
+  /// Trả về `null` nếu notification không phải giao dịch: không tìm ra số tiền,
+  /// tìm ra số tiền nhưng không biết tiền vào hay ra, hoặc bị bộ lọc của
+  /// [profile] loại ra.
   static ParseResult? parse(
     String title,
     String content, {
@@ -124,12 +131,17 @@ class BankParser {
     final amount = _numberIn(amountMatch);
     if (amount == null || amount <= 0) return null;
 
-    final (direction, confident) = _resolveDirection(
+    // No clue about which way the money went means this is not a transaction:
+    // a number with a currency unit on it says nothing by itself. Promos, codes
+    // and any message quoting a price all clear the amount step above.
+    final resolved = _resolveDirection(
       text: text,
       flat: flat,
       amountMatch: amountMatch,
       profile: profile,
     );
+    if (resolved == null) return null;
+    final (direction, confident) = resolved;
 
     return ParseResult(
       amount: amount,
@@ -230,7 +242,15 @@ class BankParser {
     }
   }
 
-  static (TxnDirection, bool) _resolveDirection({
+  /// The direction and how sure we are of it, or `null` when the notification
+  /// never says whether money came in or went out — [parse] treats that as not
+  /// a transaction at all.
+  ///
+  /// Evidence that contradicts itself (keywords for both directions match) is
+  /// still evidence: money clearly moved, only the direction is unclear, so it
+  /// comes back with `false` for the UI to ask about. That is a different thing
+  /// from having no evidence whatsoever.
+  static (TxnDirection, bool)? _resolveDirection({
     required String text,
     required String flat,
     required RegExpMatch amountMatch,
@@ -274,8 +294,12 @@ class BankParser {
     final incomeAt = _firstHitIndex(flat, defaultIncomeHints);
     final expenseAt = _firstHitIndex(flat, defaultExpenseHints);
     if (incomeAt < 0 && expenseAt < 0) {
-      // Không có manh mối nào. Đoán là chi (phổ biến hơn) và cắm cờ review.
-      return (TxnDirection.expense, false);
+      // No sign, no keyword — drop it, so [parse] returns `null`. This used to
+      // guess expense and raise the review flag, which turned every message
+      // carrying a number and a "đ" into a spend the user had to go and delete.
+      // A real bank whose format has neither can be handled by setting
+      // `directionMode` on that app's parser profile.
+      return null;
     }
     if (incomeAt < 0) return (TxnDirection.expense, true);
     if (expenseAt < 0) return (TxnDirection.income, true);
