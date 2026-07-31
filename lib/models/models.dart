@@ -5,6 +5,7 @@ export 'category.dart';
 export 'digest.dart';
 export 'ledger.dart';
 export 'parser_profile.dart';
+export 'qr_account.dart';
 export 'raw_log.dart';
 export 'reports.dart';
 export 'rule.dart';

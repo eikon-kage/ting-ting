@@ -14,6 +14,7 @@ import 'digest_page.dart';
 import 'edit_balance_sheet.dart';
 import 'format.dart';
 import 'ledger_audit_page.dart';
+import 'qr_page.dart';
 import 'raw_log_page.dart';
 import 'rules_page.dart';
 import 'search_page.dart';
@@ -174,6 +175,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               icon: const Icon(Icons.more_vert_rounded),
               onSelected: (value) => switch (value) {
                 'search' => _openPage(const SearchPage()),
+                'qr' => _openPage(const QrPage()),
                 'digest' => _openPage(const DigestPage()),
                 'audit' => _openPage(const LedgerAuditPage()),
                 'backup' => _openPage(const BackupPage()),
@@ -192,6 +194,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ),
                 ),
                 PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'qr',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.qr_code_2_rounded),
+                    title: Text('Mã QR nhận tiền'),
+                  ),
+                ),
                 PopupMenuItem(
                   value: 'digest',
                   child: ListTile(
