@@ -4,6 +4,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../domain/vietqr.dart';
 import '../domain/vietqr_banks.dart';
+import '../models/models.dart';
 import 'controllers/qr_controller.dart';
 import 'format.dart';
 import 'widgets/bank_logo.dart';
@@ -37,12 +38,7 @@ class _QrPageState extends State<QrPage> {
     super.initState();
     _controller.init().then((_) {
       if (!mounted) return;
-      // Tài khoản lần trước được điền lại từ database, nên ô nhập phải đuổi
-      // theo state của controller chứ không phải ngược lại.
-      _accountField.text = _controller.accountNumber;
-      _holderField.text = _controller.holderName;
-      final bank = _controller.bank;
-      if (bank != null) _warmLogo(bank);
+      _syncFields();
     });
   }
 
@@ -55,6 +51,19 @@ class _QrPageState extends State<QrPage> {
     _scrollController.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  /// Kéo mấy ô nhập theo state của controller.
+  ///
+  /// Chỉ đi một chiều như vậy: controller là nơi giữ mã đang tạo, [TextField]
+  /// chỉ là chỗ gõ. Gọi sau mỗi lần nạp lại từ danh sách đã lưu.
+  void _syncFields() {
+    _accountField.text = _controller.accountNumber;
+    _holderField.text = _controller.holderName;
+    _amountField.text = _controller.amount?.toString() ?? '';
+    _noteField.text = _controller.note;
+    final bank = _controller.bank;
+    if (bank != null) _warmLogo(bank);
   }
 
   Future<void> _pickBank() async {
@@ -105,6 +114,26 @@ class _QrPageState extends State<QrPage> {
     await WidgetsBinding.instance.endOfFrame;
   }
 
+  /// Mở danh sách mã đã lưu, chọn một cái thì nạp thẳng vào form.
+  Future<void> _openSaved() async {
+    final picked = await showModalBottomSheet<SavedQr>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _SavedList(controller: _controller),
+    );
+    if (picked == null || !mounted) return;
+    _controller.loadSaved(picked);
+    _syncFields();
+  }
+
+  Future<void> _remember() async {
+    await _controller.remember();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Đã lưu mã, lần sau khỏi nhập lại')),
+    );
+  }
+
   Future<void> _download() async {
     await _showCard();
     if (!mounted) return;
@@ -124,7 +153,24 @@ class _QrPageState extends State<QrPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Mã QR nhận tiền')),
+      appBar: AppBar(
+        title: const Text('Mã QR nhận tiền'),
+        actions: [
+          ListenableBuilder(
+            listenable: _controller,
+            builder: (context, _) => _controller.history.isEmpty
+                ? const SizedBox.shrink()
+                : IconButton(
+                    tooltip: 'Mã đã lưu',
+                    icon: Badge.count(
+                      count: _controller.history.length,
+                      child: const Icon(Icons.bookmarks_outlined),
+                    ),
+                    onPressed: _openSaved,
+                  ),
+          ),
+        ],
+      ),
       body: ListenableBuilder(
         listenable: _controller,
         builder: (context, _) {
@@ -256,6 +302,20 @@ class _QrPageState extends State<QrPage> {
                     : null,
                 icon: const Icon(Icons.download_rounded),
                 label: const Text('Tải ảnh mã QR về'),
+              ),
+              const SizedBox(height: 8),
+              // Tải ảnh về cũng tự lưu, nhưng không phải lần nào cũng cần ảnh:
+              // nhiều lúc chỉ chìa màn hình ra cho người ta quét.
+              OutlinedButton.icon(
+                onPressed: _controller.ready && !_controller.saved
+                    ? _remember
+                    : null,
+                icon: Icon(
+                  _controller.saved
+                      ? Icons.bookmark_added_rounded
+                      : Icons.bookmark_add_outlined,
+                ),
+                label: Text(_controller.saved ? 'Đã lưu mã này' : 'Lưu mã này'),
               ),
               const SizedBox(height: 8),
               Text(
@@ -430,6 +490,84 @@ class _QrPlaceholder extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Những mã đã lưu. Chạm một dòng là nạp lại vào form, nút thùng rác thì bỏ.
+///
+/// Nghe thẳng controller thay vì nhận sẵn danh sách: xoá xong sheet phải tự vẽ
+/// lại, mà sheet thì nằm ngoài cây widget của màn hình bên dưới.
+class _SavedList extends StatelessWidget {
+  const _SavedList({required this.controller});
+
+  final QrController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.6,
+      child: ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) {
+          final history = controller.history;
+          return Column(
+            children: [
+              ListTile(
+                title: Text(
+                  'Mã đã lưu',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                subtitle: const Text('Chạm để dùng lại'),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: history.isEmpty
+                    ? const Center(child: Text('Không còn mã nào đã lưu'))
+                    : ListView.builder(
+                        itemCount: history.length,
+                        itemBuilder: (context, index) =>
+                            _savedTile(context, history[index]),
+                      ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _savedTile(BuildContext context, SavedQr entry) {
+    final bank = bankByBin(entry.bankBin);
+    final holder = entry.holderName.trim();
+    final note = normalizeQrNote(entry.note);
+    return ListTile(
+      leading: bank == null
+          ? const Icon(Icons.account_balance_rounded)
+          : BankLogo(bank),
+      title: Text(
+        holder.isEmpty ? (bank?.shortName ?? 'VietQR') : holder.toUpperCase(),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        [
+          entry.accountNumber,
+          if (entry.amount != null) formatMoney(entry.amount!),
+          if (note.isNotEmpty) note,
+        ].join(' · '),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: IconButton(
+        tooltip: 'Bỏ mã này',
+        icon: const Icon(Icons.delete_outline_rounded),
+        onPressed: () => controller.forget(entry),
+      ),
+      onTap: () => Navigator.of(context).pop(entry),
     );
   }
 }

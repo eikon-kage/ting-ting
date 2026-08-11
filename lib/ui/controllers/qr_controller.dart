@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../../domain/qr_history.dart';
 import '../../domain/vietqr.dart';
 import '../../domain/vietqr_banks.dart';
 import '../../models/models.dart';
@@ -36,6 +37,7 @@ class QrController extends BaseController {
   String? _payload;
   String? _error;
   bool _busy = false;
+  List<SavedQr> _history = const [];
 
   VietQrBank? get bank => _bank;
   String get accountNumber => _accountNumber;
@@ -55,19 +57,70 @@ class QrController extends BaseController {
   /// Đã đủ dữ liệu để hiện mã QR.
   bool get ready => _payload != null;
 
+  /// Những mã đã tạo, mới nhất đứng đầu.
+  List<SavedQr> get history => _history;
+
+  /// Mã đang tạo đã nằm trong danh sách đã lưu.
+  bool get saved {
+    final entry = _current();
+    return entry != null && isQrRemembered(_history, entry);
+  }
+
   Future<void> init() => refresh();
 
-  /// Điền lại tài khoản của lần trước. Số tiền và nội dung thì không: chúng
-  /// thuộc về một lần thu tiền cụ thể, lần sau gần như chắc chắn khác.
+  /// Mở màn là điền sẵn mã vừa tạo lần trước, gồm cả số tiền và nội dung: mã
+  /// hay dùng lại nhất là mã vừa dùng, và xoá đi rẻ hơn gõ lại.
   @override
   Future<void> refresh() => load(() async {
-    final saved = await data.settings.readQrAccount();
-    if (saved == null) return;
-    _bank = bankByBin(saved.bankBin);
-    _accountNumber = saved.accountNumber;
-    _holderName = saved.holderName;
-    _rebuild();
+    _history = await data.settings.readQrHistory();
+    if (_history.isEmpty) return;
+    _fill(_history.first);
   });
+
+  /// Nạp một mã đã lưu vào form.
+  void loadSaved(SavedQr entry) {
+    _fill(entry);
+    notify();
+  }
+
+  /// Nhớ mã đang tạo. Gọi cả lúc user bấm lưu lẫn lúc tải ảnh về.
+  Future<void> remember() async {
+    final entry = _current();
+    if (entry == null) return;
+    _history = withQrRemembered(_history, entry);
+    await data.settings.writeQrHistory(_history);
+    notify();
+  }
+
+  /// Bỏ một mã khỏi danh sách đã lưu. Form đang hiện gì thì giữ nguyên đó —
+  /// xoá khỏi danh sách không phải là xoá thứ đang làm dở.
+  Future<void> forget(SavedQr entry) async {
+    _history = withQrForgotten(_history, entry);
+    await data.settings.writeQrHistory(_history);
+    notify();
+  }
+
+  void _fill(SavedQr entry) {
+    _bank = bankByBin(entry.bankBin);
+    _accountNumber = entry.accountNumber;
+    _holderName = entry.holderName;
+    _amount = entry.amount;
+    _note = entry.note;
+    _rebuild();
+  }
+
+  /// Mã đang tạo dưới dạng cất được, `null` khi chưa dựng được mã nào.
+  SavedQr? _current() {
+    final bank = _bank;
+    if (bank == null || _payload == null) return null;
+    return SavedQr(
+      bankBin: bank.bin,
+      accountNumber: _accountNumber.trim(),
+      holderName: _holderName.trim(),
+      amount: _amount,
+      note: _note.trim(),
+    );
+  }
 
   void selectBank(VietQrBank bank) {
     _bank = bank;
@@ -113,9 +166,9 @@ class QrController extends BaseController {
     _busy = true;
     notify();
     try {
-      // Ghi tài khoản lại trước khi chia sẻ: user đã tạo tới ảnh nghĩa là tài
-      // khoản này đúng, kể cả khi họ đổi ý ở hộp chia sẻ.
-      await _remember();
+      // Nhớ mã trước khi chia sẻ: user đã tạo tới ảnh nghĩa là mã này đúng, kể
+      // cả khi họ đổi ý ở hộp chia sẻ.
+      await remember();
       final png = await files.renderPng(cardKey);
       if (png == null) {
         return const QrOutcome.failed('Không dựng được ảnh, thử lại lần nữa');
@@ -134,18 +187,6 @@ class QrController extends BaseController {
       _busy = false;
       notify();
     }
-  }
-
-  Future<void> _remember() async {
-    final bank = _bank;
-    if (bank == null) return;
-    await data.settings.writeQrAccount(
-      QrAccount(
-        bankBin: bank.bin,
-        accountNumber: _accountNumber.trim(),
-        holderName: _holderName.trim(),
-      ),
-    );
   }
 
   /// Tên file có tên ngân hàng và bốn số cuối tài khoản — user tải nhiều mã về
