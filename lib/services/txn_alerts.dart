@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../core/money.dart';
 import '../data/data_store.dart';
+import '../domain/categorizer.dart';
 import '../models/models.dart';
 
 /// Mã các nút bấm trên thông báo giao dịch.
@@ -14,6 +15,9 @@ import '../models/models.dart';
 /// Android chỉ hiện tối đa ba nút nên phải chọn: ghi chú (gõ thẳng trên thông
 /// báo), không tính (gạt khỏi Thu–Chi) và sửa (mở app vào đúng giao dịch, ở đó
 /// đủ chỗ cho nhóm, thu/chi, sổ nợ, ví...).
+///
+/// Không có nút chọn nhóm riêng — hết chỗ, mà cũng không cần: ghi chú gọi tên
+/// một nhóm thì giao dịch vào thẳng nhóm đó (xem [applyAlertAction]).
 class AlertAction {
   static const String note = 'note';
   static const String exclude = 'exclude';
@@ -115,12 +119,7 @@ class TxnAlerts {
       return;
     }
     unawaited(
-      applyAlertAction(
-        txnId,
-        action,
-        input: response.input,
-        plugin: _plugin,
-      ),
+      applyAlertAction(txnId, action, input: response.input, plugin: _plugin),
     );
   }
 }
@@ -157,12 +156,36 @@ Future<void> applyAlertAction(
         await _pluginFor(plugin).cancel(id: txnId);
         return;
       }
-      final saved = txn.copyWith(note: note);
+      // Ghi chú gọi tên một nhóm thì xếp luôn giao dịch vào nhóm đó — một lần
+      // gõ là xong cả hai việc, khỏi phải mở app chọn lại.
+      final mapped = await _categoryFromNote(note);
+      final saved = txn.copyWith(
+        note: note,
+        category: mapped?.category,
+        excluded: mapped?.excluded == true ? true : null,
+      );
       await txns.save(saved);
-      await _confirmNote(_pluginFor(plugin), saved);
+      await _confirmNote(
+        _pluginFor(plugin),
+        saved,
+        mappedCategory: mapped?.category,
+      );
     case AlertAction.exclude:
       await txns.save(txn.copyWith(needsReview: false, excluded: true));
   }
+}
+
+/// Nhóm suy ra từ ghi chú, `null` khi ghi chú không nhắc tới nhóm nào.
+///
+/// Đọc quy tắc và danh sách nhóm ngay lúc bấm chứ không giữ sẵn: nút này chạy
+/// được cả ở isolate nền, nơi không có gì được nạp trước.
+Future<CategorySuggestion?> _categoryFromNote(String note) async {
+  final data = DataStore.instance;
+  return Categorizer.categorizeNote(
+    note,
+    userRules: await data.rules.all(),
+    categories: await data.categories.all(),
+  );
 }
 
 /// Isolate nền không có sẵn bản của [TxnAlerts]; bản dựng tạm ở đây đủ để gọi
@@ -171,10 +194,7 @@ FlutterLocalNotificationsPlugin _pluginFor(
   FlutterLocalNotificationsPlugin? plugin,
 ) => plugin ?? FlutterLocalNotificationsPlugin();
 
-Future<void> _showAlert(
-  FlutterLocalNotificationsPlugin plugin,
-  Txn txn,
-) async {
+Future<void> _showAlert(FlutterLocalNotificationsPlugin plugin, Txn txn) async {
   if (!Platform.isAndroid || txn.id == null) return;
   final body = _alertBody(txn);
   final details = AndroidNotificationDetails(
@@ -219,10 +239,11 @@ Future<void> _showAlert(
 /// Vẽ đè lên đúng thông báo cũ để user thấy ghi chú đã vào, rồi tự tắt.
 Future<void> _confirmNote(
   FlutterLocalNotificationsPlugin plugin,
-  Txn txn,
-) async {
+  Txn txn, {
+  String? mappedCategory,
+}) async {
   if (!Platform.isAndroid || txn.id == null) return;
-  final body = _alertBody(txn);
+  final body = _alertBody(txn, mappedCategory: mappedCategory);
   final details = AndroidNotificationDetails(
     _channelId,
     _channelName,
@@ -256,9 +277,18 @@ String _alertTitle(Txn txn) {
   return '$amount · ${txn.bankName}';
 }
 
-String _alertBody(Txn txn) {
+/// [mappedCategory] là nhóm vừa suy ra từ ghi chú — hiện thành một dòng riêng
+/// để user thấy ghi chú của mình đã đổi cả nhóm, không phải đoán.
+String _alertBody(Txn txn, {String? mappedCategory}) {
   final desc = txn.description?.trim();
-  final base = desc == null || desc.isEmpty ? txn.category : desc;
   final note = txn.note?.trim();
-  return note == null || note.isEmpty ? base : '$base\n📝 $note';
+  return [
+    if (desc != null && desc.isNotEmpty)
+      desc
+    // Không có nội dung thì nhóm đứng thay; dòng 🏷 bên dưới lo phần đó rồi.
+    else if (mappedCategory == null)
+      txn.category,
+    if (note != null && note.isNotEmpty) '📝 $note',
+    if (mappedCategory != null) '🏷 $mappedCategory',
+  ].join('\n');
 }

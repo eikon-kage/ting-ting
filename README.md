@@ -88,6 +88,11 @@ Kèm theo: lời nhắc sáng thứ Hai, thông báo mỗi giao dịch mới v�
 (ghi chú, không tính, cho vay…), và một **widget ngoài màn hình chính Android**
 hiện số đã chi tháng này.
 
+Ô ghi chú trên thông báo kiêm luôn chỗ chọn nhóm: gõ "ăn uống" là giao dịch vào
+nhóm Ăn uống, vì chữ bạn gõ được đối chiếu với tên nhóm và bộ từ khoá của nhóm y
+như nội dung một thông báo ngân hàng. Ghi chú không nhắc tới nhóm nào thì nhóm cũ
+giữ nguyên.
+
 ### Sao lưu
 
 Toàn bộ sổ sách xuất ra một file duy nhất, nạp lại theo hai kiểu: **gộp thêm**
