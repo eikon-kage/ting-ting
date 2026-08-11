@@ -6,6 +6,7 @@ import '../models/models.dart';
 import 'controllers/stats_controller.dart';
 import 'format.dart';
 import 'theme/chart_palette.dart';
+import 'widgets/brand_title.dart';
 import 'widgets/charts.dart';
 import 'widgets/month_selector.dart';
 
@@ -80,7 +81,7 @@ class _StatsPageState extends State<StatsPage> {
     final palette = ChartPalette.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Báo cáo')),
+      appBar: AppBar(title: const BrandTitle('Báo cáo')),
       body: ListenableBuilder(
         listenable: _controller,
         builder: (context, _) {
@@ -296,7 +297,9 @@ class _ComparisonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final percent = lastExpense == 0 ? null : (diff / lastExpense * 100).round();
+    final percent = lastExpense == 0
+        ? null
+        : (diff / lastExpense * 100).round();
     final spendingMore = diff > 0;
     final color = spendingMore ? palette.expenseText : palette.incomeText;
     return Card(
@@ -367,10 +370,7 @@ class _LegendRow extends StatelessWidget {
               ),
             ),
           ),
-          Text(
-            '${(share * 100).round()}%',
-            style: theme.textTheme.labelMedium,
-          ),
+          Text('${(share * 100).round()}%', style: theme.textTheme.labelMedium),
           const SizedBox(width: 12),
           Text(
             formatMoney(slice.value),

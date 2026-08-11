@@ -21,6 +21,7 @@ import 'search_page.dart';
 import 'sources_page.dart';
 import 'theme/app_theme.dart';
 import 'theme/chart_palette.dart';
+import 'widgets/brand_title.dart';
 import 'widgets/category_chips.dart';
 import 'widgets/date_range_bar.dart';
 import 'widgets/empty_state.dart';
@@ -161,7 +162,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ),
                   onChanged: _controller.queryChanged,
                 )
-              : const Text('Ting Ting'),
+              : const BrandTitle('Ting Ting'),
           actions: [
             IconButton(
               tooltip: _searching ? 'Đóng tìm kiếm' : 'Tìm kiếm',

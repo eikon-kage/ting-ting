@@ -6,6 +6,7 @@ import 'add_debt_page.dart';
 import 'controllers/debt_controller.dart';
 import 'format.dart';
 import 'theme/chart_palette.dart';
+import 'widgets/brand_title.dart';
 import 'widgets/empty_state.dart';
 
 /// Sổ nợ: ai đang nợ mình, mình đang nợ ai.
@@ -49,7 +50,7 @@ class _DebtPageState extends State<DebtPage> {
     final theme = Theme.of(context);
     final palette = ChartPalette.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Sổ nợ')),
+      appBar: AppBar(title: const BrandTitle('Sổ nợ')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addDebt,
         icon: const Icon(Icons.add_rounded),
