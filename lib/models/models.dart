@@ -1,6 +1,7 @@
 /// Gom mọi kiểu dữ liệu dùng chung để nơi khác chỉ cần một import.
 library;
 
+export 'bill.dart';
 export 'category.dart';
 export 'digest.dart';
 export 'ledger.dart';

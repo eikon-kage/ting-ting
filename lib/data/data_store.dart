@@ -1,5 +1,6 @@
 import 'app_database.dart';
 import 'dao/backup_dao.dart';
+import 'dao/bill_dao.dart';
 import 'dao/category_dao.dart';
 import 'dao/parser_profile_dao.dart';
 import 'dao/raw_log_dao.dart';
@@ -9,6 +10,7 @@ import 'dao/source_dao.dart';
 import 'dao/txn_dao.dart';
 import 'data_changes.dart';
 import 'repositories/backup_repository.dart';
+import 'repositories/bill_repository.dart';
 import 'repositories/category_repository.dart';
 import 'repositories/debt_repository.dart';
 import 'repositories/parser_profile_repository.dart';
@@ -21,6 +23,7 @@ import 'repositories/txn_repository.dart';
 
 export 'data_changes.dart';
 export 'repositories/backup_repository.dart';
+export 'repositories/bill_repository.dart';
 export 'repositories/category_repository.dart';
 export 'repositories/debt_repository.dart';
 export 'repositories/parser_profile_repository.dart';
@@ -44,6 +47,7 @@ class DataStore {
     required this.txns,
     required this.reports,
     required this.debts,
+    required this.bills,
     required this.categories,
     required this.rules,
     required this.sources,
@@ -62,6 +66,7 @@ class DataStore {
       txns: TxnRepository(txnDao, changes),
       reports: ReportRepository(txnDao),
       debts: DebtRepository(txnDao, changes),
+      bills: BillRepository(BillDao(database), changes),
       categories: CategoryRepository(
         CategoryDao(database),
         txnDao,
@@ -88,6 +93,9 @@ class DataStore {
   final TxnRepository txns;
   final ReportRepository reports;
   final DebtRepository debts;
+
+  /// Các cuộc chia tiền chung.
+  final BillRepository bills;
 
   /// Nhóm chi tiêu user tự quản lý.
   final CategoryRepository categories;

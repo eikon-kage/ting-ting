@@ -14,6 +14,8 @@ class Tables {
   static const String parserProfiles = 'parser_profiles';
   static const String categories = 'categories';
   static const String settings = 'settings';
+  static const String bills = 'bills';
+  static const String billItems = 'bill_items';
 }
 
 /// Câu lệnh tạo bảng dùng chung cho cả `onCreate` lẫn `onUpgrade`.
@@ -59,6 +61,41 @@ const String createSettingsTable =
   )
 ''';
 
+/// Bill chia tiền và các mục của nó.
+///
+/// Khoá chính là chuỗi `key` chứ không phải số tự tăng: bản sao lưu kiểu "gộp
+/// thêm" bỏ `id` đi để khỏi đè lên dòng đang có, mà mục thì phải bám được vào
+/// đúng bill của nó sau khi nạp. Khoá chuỗi đi theo dòng nên mối nối không đứt,
+/// và nạp lại cùng một file nhiều lần cũng không sinh bản sao.
+const String createBillsTable =
+    '''
+  CREATE TABLE IF NOT EXISTS bills (
+    key TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    members TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    settled INTEGER NOT NULL DEFAULT 0
+  )
+''';
+
+const String createBillItemsTable =
+    '''
+  CREATE TABLE IF NOT EXISTS bill_items (
+    key TEXT PRIMARY KEY,
+    bill_key TEXT NOT NULL,
+    label TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    payer TEXT NOT NULL,
+    split_mode TEXT NOT NULL DEFAULT 'equal',
+    shares TEXT,
+    created_at INTEGER NOT NULL
+  )
+''';
+
+const String createBillItemsIndex =
+    'CREATE INDEX IF NOT EXISTS idx_bill_items_bill '
+    'ON bill_items (bill_key)';
+
 /// Đổ bộ nhóm dựng sẵn vào bảng rỗng.
 ///
 /// Chỉ chạy khi bảng chưa có gì: user đã sửa danh sách của mình thì không ai
@@ -90,7 +127,7 @@ class AppDatabase {
 
   /// Đời schema hiện tại. Bản sao lưu ghi kèm con số này để lúc nạp còn biết
   /// file có mới hơn bản app đang chạy hay không.
-  static const int schemaVersion = 4;
+  static const int schemaVersion = 5;
 
   Database? _db;
 
@@ -116,6 +153,7 @@ class AppDatabase {
   /// riêng để user tự thêm sửa xoá. Máy cũ được đổ đúng bộ nhóm cũ nên giao
   /// dịch đã lưu vẫn khớp tên nhóm.
   /// v3 -> v4: thêm bảng cài đặt khoá–giá trị.
+  /// v4 -> v5: thêm hai bảng chia bill.
   Future<void> _upgradeSchema(Database db, int from, int to) async {
     if (from < 2) await db.execute(createParserProfilesTable);
     if (from < 3) {
@@ -123,6 +161,11 @@ class AppDatabase {
       await seedCategories(db);
     }
     if (from < 4) await db.execute(createSettingsTable);
+    if (from < 5) {
+      await db.execute(createBillsTable);
+      await db.execute(createBillItemsTable);
+      await db.execute(createBillItemsIndex);
+    }
   }
 
   Future<void> _createSchema(Database db, int version) async {
@@ -184,6 +227,9 @@ class AppDatabase {
     await db.execute(createParserProfilesTable);
     await db.execute(createCategoriesTable);
     await db.execute(createSettingsTable);
+    await db.execute(createBillsTable);
+    await db.execute(createBillItemsTable);
+    await db.execute(createBillItemsIndex);
     await seedCategories(db);
   }
 }

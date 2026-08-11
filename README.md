@@ -19,7 +19,7 @@ Bốn tab chính:
 | Tab | Nội dung |
 | --- | --- |
 | **Thu chi** | Số dư hai ví, tổng thu–chi trong kỳ, danh sách giao dịch theo ngày, tìm kiếm và lọc theo khoảng ngày / nhóm / chiều tiền. |
-| **Sổ nợ** | Ai đang nợ mình, mình đang nợ ai, lịch sử vay–trả với từng người. |
+| **Sổ nợ** | Ai đang nợ mình, mình đang nợ ai, lịch sử vay–trả với từng người, và chia bill cho những cuộc tiêu tiền chung. |
 | **Báo cáo** | Chi theo nhóm, xu hướng 6 tháng, dự báo tháng này đang đi về đâu, so sánh với tháng trước. |
 | **Ngân hàng** | Mỗi app gửi thông báo một dòng: bật/tắt ghi nhận, khai mẫu bóc tách riêng, xem thông báo nào chưa đọc ra được. |
 
@@ -60,6 +60,25 @@ lịch sử luôn cộng ra được con số đang hiện.
 
 Sổ nợ nằm ngoài Thu–Chi: bố mẹ chuyển tiền cho bạn không phải thu nhập, bạn trả
 lại cũng không phải chi tiêu — nó chỉ làm số dư giữa hai bên thay đổi.
+
+### Chia bill
+
+Một chuyến đi chơi có nhiều khoản, mỗi khoản một người trả. Mở **Chia bill** ở
+tab Sổ nợ, ghi từng khoản: ai trả, hết bao nhiêu, rồi chọn **chia đều** cho
+những người có mặt, hoặc **mỗi người một khoản** khi người gọi món đắt phải trả
+nhiều hơn. Phần lẻ của phép chia được dồn từng đồng cho người đầu danh sách nên
+tổng các phần luôn khớp đúng hoá đơn; phần chưa gán cho ai thì người đã trả tự
+chịu, và bảng chốt sổ không bao giờ lệch.
+
+App tính ra phần thật của từng người, đối chiếu với số họ đã móc ra trả, rồi rút
+gọn thành ít lần đưa tiền nhất — thay vì năm người trả qua trả lại thì chỉ còn
+vài dòng "Nam đưa Tôi 200.000".
+
+Bill **không chạm vào Thu–Chi lẫn Sổ nợ**, và đó là chủ ý: 4 triệu bạn quẹt thẻ
+ở nhà hàng đã được thông báo ngân hàng ghi vào sổ rồi. Ghi thêm một khoản cho vay
+nữa là trừ tiền hai lần, mà số dư ví thì lệch, còn chuỗi số dư dùng để đối soát
+thì đứt. Bill chỉ trả lời "ai đưa ai bao nhiêu"; lúc họ chuyển khoản trả thật,
+thông báo ngân hàng vào sổ như mọi giao dịch khác.
 
 ### Đối soát số dư — tìm giao dịch app đã bỏ lỡ
 

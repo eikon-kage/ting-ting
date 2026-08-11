@@ -18,6 +18,9 @@ class BackupDao {
     Tables.parserProfiles,
     Tables.settings,
     Tables.txns,
+    // Bill trước mục của bill: nạp xong bill thì mục mới có chỗ để bám vào.
+    Tables.bills,
+    Tables.billItems,
   ];
 
   /// Nhật ký thông báo thô. Nặng và không phải dữ liệu sổ sách, nên chỉ chép

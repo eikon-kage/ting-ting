@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import 'add_debt_page.dart';
+import 'bills_page.dart';
 import 'controllers/debt_controller.dart';
 import 'format.dart';
 import 'theme/chart_palette.dart';
@@ -50,7 +51,18 @@ class _DebtPageState extends State<DebtPage> {
     final theme = Theme.of(context);
     final palette = ChartPalette.of(context);
     return Scaffold(
-      appBar: AppBar(title: const BrandTitle('Sổ nợ')),
+      appBar: AppBar(
+        title: const BrandTitle('Sổ nợ'),
+        actions: [
+          IconButton(
+            tooltip: 'Chia bill',
+            icon: const Icon(Icons.groups_rounded),
+            onPressed: () => Navigator.of(context).push<void>(
+              MaterialPageRoute<void>(builder: (_) => const BillsPage()),
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addDebt,
         icon: const Icon(Icons.add_rounded),
