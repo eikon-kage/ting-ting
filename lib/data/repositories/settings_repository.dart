@@ -1,4 +1,4 @@
-import '../../models/qr_account.dart';
+import '../../models/saved_qr.dart';
 import '../dao/settings_dao.dart';
 import '../data_changes.dart';
 
@@ -10,8 +10,17 @@ class SettingsRepository {
   /// Bật thông báo tổng kết tuần vào sáng thứ Hai.
   static const String weeklyDigest = 'weekly_digest';
 
-  /// Tài khoản nhận tiền dùng cho màn mã QR, dạng JSON của [QrAccount].
-  static const String qrAccount = 'qr_account';
+  /// Những mã QR đã tạo, dạng JSON một mảng [SavedQr], mới nhất đứng đầu.
+  static const String qrHistory = 'qr_history';
+
+  /// Light, dark or follow the system: `light`, `dark` or `system`. Missing
+  /// means the user never chose, and the app stays dark.
+  static const String themeMode = 'theme_mode';
+
+  /// Khoá của bản đầu, hồi màn QR chỉ nhớ được đúng một tài khoản. Máy đã cài
+  /// bản đó vẫn còn dữ liệu ở đây và không có gì ghi sang khoá mới, nên vẫn
+  /// phải đọc tới.
+  static const String _legacyQrAccount = 'qr_account';
 
   final SettingsDao _dao;
   final DataChanges _changes;
@@ -27,15 +36,22 @@ class SettingsRepository {
     _changes.markChanged();
   }
 
-  /// Tài khoản màn mã QR điền sẵn lần sau, `null` khi user chưa tạo mã nào.
-  Future<QrAccount?> readQrAccount() async {
-    final raw = await _dao.read(qrAccount);
-    return raw == null ? null : QrAccount.decode(raw);
+  /// Những mã QR đã tạo, mới nhất đứng đầu. Rỗng khi user chưa tạo mã nào.
+  Future<List<SavedQr>> readQrHistory() async {
+    final raw = await _dao.read(qrHistory);
+    if (raw != null) return SavedQr.decodeList(raw);
+    final legacy = await _dao.read(_legacyQrAccount);
+    return legacy == null ? const [] : SavedQr.decodeList(legacy);
   }
 
-  /// Không gõ chuông [DataChanges]: đây là chỗ điền sẵn của riêng màn mã QR,
-  /// không màn nào khác đọc tới, mà chuông thì kéo mọi controller đang mở tải
-  /// lại số liệu.
-  Future<void> writeQrAccount(QrAccount account) =>
-      _dao.write(qrAccount, account.encode());
+  Future<String?> readThemeMode() => _dao.read(themeMode);
+
+  /// Does not ring [DataChanges]: only the theme reads this, and the bell
+  /// would make every open controller reload its numbers.
+  Future<void> writeThemeMode(String value) => _dao.write(themeMode, value);
+
+  /// Không gõ chuông [DataChanges]: danh sách này chỉ màn mã QR đọc tới, mà
+  /// chuông thì kéo mọi controller đang mở tải lại số liệu.
+  Future<void> writeQrHistory(List<SavedQr> history) =>
+      _dao.write(qrHistory, SavedQr.encodeList(history));
 }

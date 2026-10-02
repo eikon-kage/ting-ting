@@ -92,7 +92,7 @@ class NoticeBanner extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: fg.withValues(alpha: 0.2)),
       ),
       child: Column(

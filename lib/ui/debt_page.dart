@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import 'add_debt_page.dart';
+import 'bills_page.dart';
 import 'controllers/debt_controller.dart';
 import 'format.dart';
 import 'theme/chart_palette.dart';
+import 'widgets/brand_title.dart';
 import 'widgets/empty_state.dart';
 
 /// Sổ nợ: ai đang nợ mình, mình đang nợ ai.
@@ -49,7 +51,18 @@ class _DebtPageState extends State<DebtPage> {
     final theme = Theme.of(context);
     final palette = ChartPalette.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Sổ nợ')),
+      appBar: AppBar(
+        title: const BrandTitle('Sổ nợ'),
+        actions: [
+          IconButton(
+            tooltip: 'Chia bill',
+            icon: const Icon(Icons.groups_rounded),
+            onPressed: () => Navigator.of(context).push<void>(
+              MaterialPageRoute<void>(builder: (_) => const BillsPage()),
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addDebt,
         icon: const Icon(Icons.add_rounded),
@@ -70,7 +83,7 @@ class _DebtPageState extends State<DebtPage> {
                   margin: const EdgeInsets.all(16),
                   color: theme.colorScheme.primaryContainer,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(10),
                     // A tint of the fill's own hue rather than `outline`: the
                     // neutral grey outline reads as a hard dirty edge once the
                     // card is tinted again.

@@ -93,6 +93,79 @@ void main() {
     });
   });
 
+  group('Nhóm suy ra từ ghi chú', () {
+    final categories = [
+      const Category(name: Category.income, builtIn: true),
+      const Category(name: 'Ăn uống', keywords: ['highlands', 'an uong']),
+      const Category(name: 'Con cái', keywords: ['hoc phi']),
+      const Category(name: Category.uncategorized, builtIn: true),
+    ];
+
+    CategorySuggestion? note(String text, {List<Rule> rules = const []}) =>
+        Categorizer.categorizeNote(
+          text,
+          userRules: rules,
+          categories: categories,
+        );
+
+    test('gõ thẳng tên nhóm là trúng nhóm đó', () {
+      expect(note('ăn uống')?.category, 'Ăn uống');
+    });
+
+    test('tên nhóm nhận ra cả khi gõ không dấu, chữ thường', () {
+      expect(note('AN UONG voi sep')?.category, 'Ăn uống');
+    });
+
+    test('từ khoá của nhóm cũng ăn, không riêng gì tên', () {
+      expect(note('cà phê highlands')?.category, 'Ăn uống');
+    });
+
+    test('nhóm chưa khai từ khoá nào vẫn gọi được bằng tên', () {
+      expect(
+        Categorizer.categorizeNote(
+          'con cái',
+          categories: const [Category(name: 'Con cái')],
+        )?.category,
+        'Con cái',
+      );
+    });
+
+    test('ghi chú không nhắc tới nhóm nào thì giữ nguyên nhóm cũ', () {
+      expect(note('trả tiền cho anh Hùng'), isNull);
+      expect(note(''), isNull);
+      expect(note('   '), isNull);
+    });
+
+    test('"khách sạn" không bị hiểu thành nhóm Khác', () {
+      expect(note('khách sạn Đà Lạt'), isNull);
+    });
+
+    test(
+      'quy tắc của user được xét trước, kèm cả yêu cầu loại khỏi báo cáo',
+      () {
+        final suggestion = note(
+          'học phí cho mẹ',
+          rules: [
+            Rule(keyword: 'cho mẹ', category: 'Gia đình', autoExclude: true),
+          ],
+        );
+
+        expect(suggestion?.category, 'Gia đình');
+        expect(suggestion?.excluded, isTrue);
+      },
+    );
+
+    test('tên nhóm thắng từ khoá của nhóm khác đứng trên', () {
+      // "hoc phi" là từ khoá của Con cái, nhưng user gọi thẳng tên Ăn uống.
+      expect(note('hoc phi va an uong')?.category, 'Ăn uống');
+    });
+
+    test('chiều tiền không xen vào: ghi chú trên khoản thu vẫn ăn', () {
+      // Khác [Categorizer.categorize], nơi tiền vào luôn là Thu nhập.
+      expect(note('ăn uống')?.category, isNot(Category.income));
+    });
+  });
+
   group('Bộ nhóm dựng sẵn', () {
     test('có đủ ba nhóm hệ thống và chúng được đánh dấu không xoá được', () {
       for (final name in Category.builtInNames) {

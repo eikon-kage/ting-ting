@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:ting_ting/data/data_store.dart';
 import 'package:ting_ting/ui/qr_page.dart';
 import 'package:ting_ting/ui/theme/app_theme.dart';
 
@@ -12,6 +13,13 @@ void main() {
   setUpAll(() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+  });
+
+  setUp(() async {
+    // The screen remembers codes in the settings table, and the test database
+    // is a file that outlives the run. Start every test from an empty list, or
+    // the last run's saved code fills the form in this one.
+    await DataStore.instance.settings.writeQrHistory(const []);
   });
 
   /// Lets the settings read off sqlite finish before painting again — the query
@@ -121,5 +129,37 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('1.500.000 đ'), findsOneWidget);
+  });
+
+  // Runs last on purpose: it is the only test that writes to the settings
+  // table, and every test above expects a screen with nothing filled in.
+  testWidgets('remembers a code and offers it again next time', (tester) async {
+    await pumpPage(tester);
+    await pickBank(tester, 'techcom', 'Techcombank');
+    await enterAccount(tester, '19001234567890');
+    await tester.enterText(find.byType(TextField).at(2), '250000');
+    await settle(tester);
+    await scrollToBottom(tester);
+
+    await tester.tap(find.text('Lưu mã này'));
+    await settle(tester);
+    expect(find.text('Đã lưu mã này'), findsOneWidget);
+
+    // The saved list reaches it, amount and all.
+    await tester.tap(find.byTooltip('Mã đã lưu'));
+    await settle(tester);
+    expect(find.text('19001234567890 · 250.000 đ'), findsOneWidget);
+
+    // Opening the screen again starts from that code rather than blank. An
+    // empty tree first, or the framework reuses the identical `const QrPage()`
+    // it is already showing and nothing is reopened at all.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+    await pumpPage(tester);
+    final account = tester.widget<TextField>(find.byType(TextField).first);
+    expect(account.controller?.text, '19001234567890');
+    await scrollToBottom(tester);
+    expect(find.byType(QrImageView), findsOneWidget);
+    expect(find.text('250.000 đ'), findsWidgets);
   });
 }

@@ -8,6 +8,7 @@ import 'bank_template_page.dart';
 import 'controllers/bank_templates_controller.dart';
 import 'format.dart';
 import 'theme/app_theme.dart';
+import 'widgets/brand_title.dart';
 import 'widgets/empty_state.dart';
 
 /// Tab "Ngân hàng": mỗi app gửi thông báo một dòng, bật/tắt ghi nhận và khai
@@ -113,7 +114,7 @@ class _BankTemplatesPageState extends State<BankTemplatesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Ngân hàng')),
+      appBar: AppBar(title: const BrandTitle('Ngân hàng')),
       body: ListenableBuilder(
         listenable: _controller,
         builder: (context, _) {
@@ -392,8 +393,7 @@ class _CaptureTestDialogState extends State<_CaptureTestDialog> {
         Icons.error_outline_rounded,
         warningText,
       ),
-      CaptureTestResult.unparsed ||
-      CaptureTestResult.unsupported => (
+      CaptureTestResult.unparsed || CaptureTestResult.unsupported => (
         Icons.info_outline_rounded,
         scheme.onSurfaceVariant,
       ),

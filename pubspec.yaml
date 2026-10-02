@@ -69,11 +69,26 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # Logo ngân hàng cho màn mã QR, đặt tên theo mã BIN. Lấy từ danh sách thành
-  # viên NAPAS công bố (cdn.vietqr.io), gói sẵn vào app để màn QR chạy được cả
-  # khi mất mạng.
   assets:
+    # Logo ngân hàng cho màn mã QR, đặt tên theo mã BIN. Lấy từ danh sách thành
+    # viên NAPAS công bố (cdn.vietqr.io), gói sẵn vào app để màn QR chạy được
+    # cả khi mất mạng.
     - assets/banks/
+    # Bản sao icon launcher, đủ các mật độ màn hình. Khai đích danh file 1x chứ
+    # không khai cả thư mục: khai thư mục thì Flutter bỏ qua mấy thư mục 2.0x,
+    # 3.0x bên trong và máy nào cũng phóng to bản 48px lên cho vỡ.
+    - assets/brand/app_icon.png
+
+  # Monospace face for numbers, labels and headers. OFL, see
+  # assets/fonts/OFL.txt; covers Vietnamese.
+  fonts:
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Regular.ttf
+        - asset: assets/fonts/JetBrainsMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/JetBrainsMono-Bold.ttf
+          weight: 700
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
