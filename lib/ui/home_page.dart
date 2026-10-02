@@ -25,6 +25,7 @@ import 'widgets/brand_title.dart';
 import 'widgets/category_chips.dart';
 import 'widgets/date_range_bar.dart';
 import 'widgets/empty_state.dart';
+import 'widgets/theme_picker.dart';
 
 /// Màn chính: số dư hai ví, tổng thu chi tháng và danh sách giao dịch.
 class HomePage extends StatefulWidget {
@@ -183,6 +184,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 'sources' => _openPage(const SourcesPage()),
                 'categories' => _openPage(const CategoriesPage()),
                 'rules' => _openPage(const RulesPage()),
+                'theme' => showThemePicker(context),
                 _ => _openPage(const RawLogPage()),
               },
               itemBuilder: (_) => const [
@@ -241,6 +243,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.rule_rounded),
                     title: Text('Quy tắc phân loại'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'theme',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.palette_outlined),
+                    title: Text('Giao diện'),
                   ),
                 ),
                 PopupMenuItem(
@@ -500,7 +510,7 @@ class _OverviewCardState extends State<_OverviewCard> {
         children: [
           InkWell(
             onTap: () => setState(() => _expanded = !_expanded),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 8, 12),
               child: Row(
@@ -1159,7 +1169,7 @@ class _TxnDetailSheetState extends State<TxnDetailSheet> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: SelectableText(
                   '${txn.rawTitle}\n${txn.rawContent}'.trim(),

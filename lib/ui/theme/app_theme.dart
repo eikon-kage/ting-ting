@@ -1,20 +1,27 @@
 import 'package:flutter/material.dart';
 
+import 'mission_style.dart';
+
 /// The app's theme: large readable type, rounded icons, one accent per scheme.
 ///
-/// Only the dark scheme ships — `main.dart` pins `themeMode`. The light one is
-/// kept building and tested, but nobody sees it, so weigh any claim it makes
-/// about "the app" accordingly.
+/// Both schemes ship; the user picks one from the ⋮ menu, see
+/// `ThemeController`. Dark is the default.
 ///
 /// Both schemes start from [brand] through the `fidelity` variant and then
 /// override most of what matters, because `fidelity` tracks the seed far too
 /// closely for a background:
 ///
-/// - the `surface` family comes out tinted in both — see [_neutralSurfaces]
-///   for the light cream ramp and [_darkSurfaces] for the dark one;
+/// - the `surface` family comes out tinted in both — see [_lightSurfaces]
+///   and [_darkSurfaces];
 /// - `primaryContainer` comes out as the raw seed — see
-///   [_tintedPrimaryContainer], which also swaps the dark scheme's accents to
-///   trustybot's blue.
+///   [_tintedPrimaryContainer], which also sets both schemes' accents.
+///
+/// Both follow the ARES VII "mission control" dashboard. Dark is the console
+/// itself: slate panels on a faint cyan grid, safety-orange corner brackets,
+/// off-white numerals, cyan for data and amber for caution. Light is the same
+/// console printed as a flight plan: grey paper, slate ink, the orange and
+/// cyan darkened until they read as text. The pieces `ThemeData` has no slot
+/// for live in `mission_style.dart`.
 ///
 /// The rule that survived every revision: keep backgrounds quiet and let the
 /// accent carry the colour. Draining both leaves the app looking dead; tinting
@@ -26,17 +33,10 @@ class AppTheme {
   /// sRGB; clamped into gamut it lands on `#FF6900`, really
   /// `oklch(0.700 0.202 44.4)`.
   ///
-  /// This used to be the app's identity, picked warm specifically to stay clear
-  /// of trustybot, whose every chromatic colour sits in the blue–indigo–violet
-  /// band (hue 247°–291°). That constraint was dropped by request: the dark
-  /// scheme's accents are now taken straight from trustybot's own palette — see
-  /// [_tintedPrimaryContainer]. The two apps are meant to look related now.
-  ///
-  /// What the seed still does is narrower than it looks. Both schemes override
-  /// their surfaces by hand, and the dark one overrides `primary` and
-  /// `primaryContainer` too, so this really only drives the light scheme's
-  /// `primary` plus the `secondary` / `tertiary` / `error` roles that nothing
-  /// currently paints with. Changing it moves less than the name suggests.
+  /// Neither scheme uses it for its accents; those are the ARES palette, set
+  /// by hand in [_tintedPrimaryContainer]. What the seed still drives is the
+  /// handful of roles nothing overrides and nothing currently paints with.
+  /// Changing it moves far less than the name suggests.
   ///
   /// Do not switch to `tonalSpot`, the M3 default variant: with this seed it
   /// wrings out most of the chroma and yields `#8E4D2E` for `primary`, the
@@ -45,7 +45,7 @@ class AppTheme {
 
   static ThemeData light() => _build(
     _tintedPrimaryContainer(
-      _neutralSurfaces(
+      _lightSurfaces(
         ColorScheme.fromSeed(
           seedColor: brand,
           dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
@@ -54,37 +54,33 @@ class AppTheme {
     ),
   );
 
-  /// Replaces the light scheme's `surface` family with a warm cream ramp.
+  /// Replaces the light scheme's `surface` family with a grey paper ramp.
   ///
-  /// `fidelity` tints the neutrals heavily: `surfaceContainerHigh` comes out
-  /// `#FEE3D8`, a visible peach, and that role backs the chips, text fields,
-  /// navigation bar and every secondary block — so the whole screen read as if
-  /// a sheet of orange had been laid over it.
+  /// `fidelity` tints the neutrals heavily — `surfaceContainerHigh` comes out
+  /// `#FEE3D8`, a visible peach, and that role backs chips, fields and the
+  /// navigation bar.
   ///
-  /// The measure that matters here is how far the red channel runs ahead of
-  /// blue. `fidelity` puts it at 38/255, which is the peach. A first pass cut
-  /// it to 3–5, which killed the tint but left large areas — cards, banners,
-  /// the overview panel — reading as flat grey, and the app looked drained.
-  /// This ramp sits at 6–17: clearly warm, nowhere near peach.
+  /// The base `#F2F1EE` is a barely warm grey, so the white panels
+  /// (`#FBFAF8`) lift off it the way the dark panels lift off the slate.
+  /// `outlineVariant` is the ink at 10% on the base, the reference's `--line`
+  /// inverted.
   ///
-  /// Only backgrounds and the text on them; `primary` still comes from the
-  /// seed.
-  ///
-  /// Contrast on the new ramp: `onSurface` 16.26:1, `onSurfaceVariant` 7.72:1,
-  /// dropping to 6.33:1 on `surfaceContainerHighest` — all clear of AA.
-  static ColorScheme _neutralSurfaces(ColorScheme scheme) => scheme.copyWith(
-    surface: const Color(0xFFFFFCF9),
-    surfaceBright: const Color(0xFFFFFCF9),
-    surfaceDim: const Color(0xFFF0E9E2),
+  /// Contrast on the base: `onSurface` 15.8:1, `onSurfaceVariant` 5.9:1.
+  static ColorScheme _lightSurfaces(ColorScheme scheme) => scheme.copyWith(
+    surface: const Color(0xFFF2F1EE),
+    surfaceBright: const Color(0xFFFBFAF8),
+    surfaceDim: const Color(0xFFE6E5E1),
     surfaceContainerLowest: const Color(0xFFFFFFFF),
-    surfaceContainerLow: const Color(0xFFFDF8F3),
-    surfaceContainer: const Color(0xFFF8F2EB),
-    surfaceContainerHigh: const Color(0xFFF3ECE4),
-    surfaceContainerHighest: const Color(0xFFEDE5DC),
-    onSurface: const Color(0xFF241D17),
-    onSurfaceVariant: const Color(0xFF58504A),
-    outline: const Color(0xFF8A8079),
-    outlineVariant: const Color(0xFFE4DBD1),
+    surfaceContainerLow: const Color(0xFFFBFAF8),
+    surfaceContainer: const Color(0xFFF6F5F2),
+    surfaceContainerHigh: const Color(0xFFECEBE7),
+    surfaceContainerHighest: const Color(0xFFE5E4E0),
+    onSurface: const Color(0xFF14181F),
+    onSurfaceVariant: const Color(0xFF585D65),
+    outline: const Color(0xFF8A8F96),
+    outlineVariant: const Color(0xFFDCDBD9),
+    inverseSurface: const Color(0xFF1B1F26),
+    onInverseSurface: const Color(0xFFE8E6E3),
   );
 
   static ThemeData dark() => _build(
@@ -99,46 +95,35 @@ class AppTheme {
     ),
   );
 
-  /// Replaces the dark scheme's `surface` family with trustybot's dark ramp.
+  /// Replaces the dark scheme's `surface` family with the ARES slate ramp.
   ///
-  /// `fidelity` pulls the dark neutrals toward the seed just as it does the
-  /// light ones, so `surface` lands on `#1D100A` and the raised containers on
-  /// `#362720`. Those are browns. On a phone they read as a tinted screen
-  /// rather than as an app with a dark background.
+  /// `fidelity` pulls the dark neutrals toward the seed, so `surface` lands on
+  /// `#1D100A` — a brown that reads as a tinted screen, not a dark one.
   ///
-  /// The three anchors come from `darkColors` in trustybot-mobile's
-  /// `src/shared/theme/themes.ts`: `background` `#0E1116` is the base,
-  /// `surface` `#1A1F26` the mid container, `border` `#2A3038` the top of the
-  /// ramp. The remaining steps interpolate between them, so the whole family
-  /// holds one hue — a cool blue-grey where blue leads red by 8–14/255. That
-  /// coolness is the opposite of the light scheme, where the ramp is warm:
-  /// warmth that reads as "cream" on white reads as "stained" on dark.
+  /// Anchors from the reference's CSS: `--bg #0E1116` is the base, `--panel
+  /// #12161D` backs cards, sheets and the navigation bar. The steps above are
+  /// the panel lifted by the white overlays the reference uses for tiles and
+  /// hover. `outlineVariant` is its `--line`, off-white at 9% on the base;
+  /// `outline` is `--dim2`.
   ///
-  /// The base used to be true `#000000`, for OLED. Lifting it to `#0E1116`
-  /// gives up that power saving and buys back the shadows: against pure black
-  /// the elevation ramp only reads by fill, and a card sitting one step up was
-  /// a rectangle appearing out of nothing. Cards, sheets and the navigation bar
-  /// all sit on `surfaceContainerLow`, which now has somewhere to sit.
-  ///
-  /// Only the surface roles. The accents on this ramp are set in
-  /// [_tintedPrimaryContainer], which takes trustybot's blue.
-  ///
-  /// Contrast on the base: `onSurface` 15.4:1, `onSurfaceVariant` 7.7:1, and
-  /// 5.4:1 where the variant sits on `surfaceContainerHighest` — all clear of
-  /// AA. The chart colours hold up: income 9.7:1, expense 8.1:1.
+  /// Text is the reference's off-white `--t #E8E6E3` and `--dim #8B8F96`:
+  /// 15.6:1 and 5.9:1 on the base, 4.9:1 for the dim one on
+  /// `surfaceContainerHighest` — all clear of AA.
   static ColorScheme _darkSurfaces(ColorScheme scheme) => scheme.copyWith(
     surface: const Color(0xFF0E1116),
     surfaceDim: const Color(0xFF0A0D11),
-    surfaceBright: const Color(0xFF2E353F),
+    surfaceBright: const Color(0xFF262B33),
     surfaceContainerLowest: const Color(0xFF0A0D11),
-    surfaceContainerLow: const Color(0xFF141922),
-    surfaceContainer: const Color(0xFF1A1F26),
-    surfaceContainerHigh: const Color(0xFF222831),
-    surfaceContainerHighest: const Color(0xFF2A3038),
-    onSurface: const Color(0xFFE6E8EB),
-    onSurfaceVariant: const Color(0xFFA0A6AD),
-    outline: const Color(0xFF79818C),
-    outlineVariant: const Color(0xFF2A3038),
+    surfaceContainerLow: const Color(0xFF12161D),
+    surfaceContainer: const Color(0xFF161A21),
+    surfaceContainerHigh: const Color(0xFF1B1F26),
+    surfaceContainerHighest: const Color(0xFF22262D),
+    onSurface: const Color(0xFFE8E6E3),
+    onSurfaceVariant: const Color(0xFF8B8F96),
+    outline: const Color(0xFF5B6068),
+    outlineVariant: const Color(0xFF222428),
+    inverseSurface: const Color(0xFFE8E6E3),
+    onInverseSurface: const Color(0xFF0E1116),
   );
 
   /// Softens `primaryContainer` into a pale tint of the brand orange.
@@ -169,34 +154,24 @@ class AppTheme {
   /// ramp and the accent moves into the foreground, where it sits on a small
   /// area and stays sharp.
   ///
-  /// That leaves the dark fill nearly level with an unselected chip, 1.14:1, so
-  /// it is not carrying selection on its own. The blue label against the grey
-  /// one is, backed by w700 and the `outline` border — the same three cues the
-  /// light scheme leans on.
+  /// The dark fill is a low orange cast, not much brighter than an unselected
+  /// chip, so it is not carrying selection on its own. The orange label against
+  /// the grey one is, backed by w700 and the `outline` border — the same three
+  /// cues the light scheme leans on.
   ///
-  /// Contrast against `onPrimaryContainer` is 7.51:1 light and 4.93:1 dark.
+  /// Contrast against `onPrimaryContainer` is 7.51:1 light and 5.4:1 dark.
   ///
-  /// ## Why the dark accents are blue
+  /// ## The dark accents
   ///
-  /// They are trustybot's, by request — `primary-500 #5B9CD6`, its declared
-  /// "Brand blue. Default action color". This reverses the reasoning kept on
-  /// [brand]; that note has been rewritten rather than left to contradict this
-  /// one.
+  /// Straight from the ARES palette. `primary` is safety orange `#FF6B1A`,
+  /// 6.6:1 on `surface`, with near-black `#140800` on top of it at 6.9:1 — the
+  /// reference's own button text. The selected fill is that orange at 16% on
+  /// the base, as on the reference's pressed segment, and the label on it stays
+  /// the full orange at 5.4:1.
   ///
-  /// Picking the shade was forced. `primary` is both the fill behind the FAB
-  /// and filled buttons *and* a text colour for app bar icons, the focused
-  /// field border and the selected navigation label. Those two jobs pull in
-  /// opposite directions on the dark surface, and the scale cannot satisfy
-  /// both:
+  /// `secondary` is the data cyan `#4EE1FF`, `tertiary` the caution amber
+  /// `#FFB000`, `error` the alarm red `#FF4A3D`.
   ///
-  /// - `#2B5ED4` (650) carries white text at 5.75:1, but as a label on `surface`
-  ///   it is 3.29:1 — under AA.
-  /// - `#5B9CD6` (500) reads 6.46:1 on `surface`, but white on it is 2.93:1 —
-  ///   well under AA.
-  ///
-  /// So 500 for the role and a dark navy for its foreground: `#08172B` gives
-  /// 6.14:1 on the fill. Same trade the orange version made, same resolution.
-  /// A white button label is not available in this hue at any usable shade.
   /// Background and foreground for "needs your attention", as distinct from
   /// "something failed".
   ///
@@ -206,51 +181,90 @@ class AppTheme {
   /// not broken anything; it is a task the user has not done yet, and dressing
   /// it as a failure both alarms and misinforms.
   ///
-  /// The foreground is amber from trustybot's `warn` scale — `warn-400` light
-  /// on dark, `warn-800` dark on light.
-  ///
-  /// The dark background is *not* from that scale. `warn-900` was tried and
-  /// rendered as a muddy brown panel: amber ramps go brown at the dark end,
-  /// which is the same stain that `#5C3620` produced in
-  /// [_tintedPrimaryContainer]. The fix is the rule that section already
-  /// establishes — lift the fill one step off the surface ramp and let the
-  /// foreground carry the hue. `#2E2614` is that lift with a warm cast, 1.26:1
-  /// off `surface`, and `NoticeBanner` adds a border at 20% of the foreground.
-  ///
-  /// The amber then reads at 9.31:1, so the warning is loud where it should be
-  /// — in the icon and the words — and quiet where a large fill would only be
-  /// dirty.
+  /// On dark it is the reference's caution banner: amber `#FFB000` over the
+  /// same amber at 10% on the base, which lands at `#262114`. Amber ramps go
+  /// brown at the dark end, so the fill stays one step off the surface and the
+  /// foreground carries the hue — 10.1:1. `NoticeBanner` adds a border at 20%
+  /// of the foreground. On light it is the amber at 18% on the panel with a
+  /// dark amber `#8A5A00` on top, 5.1:1.
   ///
   /// Leave `errorContainer` alone for real errors — a redacted bank template,
   /// a failed import. If both appear at once they should not look alike.
   static (Color background, Color foreground) warningTone(ColorScheme scheme) =>
       scheme.brightness == Brightness.dark
-      ? (const Color(0xFF2E2614), const Color(0xFFFAC515))
-      : (const Color(0xFFFEF7C3), const Color(0xFF854A0E));
+      ? (const Color(0xFF262114), const Color(0xFFFFB000))
+      : (const Color(0xFFFCEDCB), const Color(0xFF8A5A00));
 
   static ColorScheme _tintedPrimaryContainer(ColorScheme scheme) =>
       scheme.brightness == Brightness.dark
       ? scheme.copyWith(
-          primary: const Color(0xFF5B9CD6),
-          onPrimary: const Color(0xFF08172B),
-          primaryContainer: const Color(0xFF202A3A),
-          // Same blue as `primary`, on purpose. The navigation label takes
-          // `primary` while a chip label takes this one, and two different
-          // blues for the one meaning — "selected" — reads as a mistake.
-          // 4.93:1 on the container, so the chip label clears AA.
-          onPrimaryContainer: const Color(0xFF5B9CD6),
+          primary: const Color(0xFFFF6B1A),
+          onPrimary: const Color(0xFF140800),
+          primaryContainer: const Color(0xFF351F17),
+          // Same orange as `primary`, on purpose. The navigation label takes
+          // `primary` while a chip label takes this one, and two shades for
+          // the one meaning — "selected" — reads as a mistake.
+          onPrimaryContainer: const Color(0xFFFF6B1A),
+          secondary: const Color(0xFF4EE1FF),
+          onSecondary: const Color(0xFF001B22),
+          secondaryContainer: const Color(0xFF15313A),
+          onSecondaryContainer: const Color(0xFF4EE1FF),
+          tertiary: const Color(0xFFFFB000),
+          onTertiary: const Color(0xFF1A1200),
+          tertiaryContainer: const Color(0xFF262114),
+          onTertiaryContainer: const Color(0xFFFFB000),
+          error: const Color(0xFFFF4A3D),
+          onError: const Color(0xFF1A0402),
         )
       : scheme.copyWith(
-          primaryContainer: const Color(0xFFFFDFC9),
-          onPrimaryContainer: const Color(0xFF7A2E00),
+          // Safety orange itself is 2.5:1 on paper, so text takes it burnt:
+          // 5.8:1 on the base, 4.8:1 on the selected fill. The brackets keep
+          // the bright one, see [_bracket].
+          primary: const Color(0xFFA8380A),
+          onPrimary: const Color(0xFFFFFFFF),
+          primaryContainer: const Color(0xFFE9DBD3),
+          onPrimaryContainer: const Color(0xFFA8380A),
+          secondary: const Color(0xFF0E7490),
+          onSecondary: const Color(0xFFFFFFFF),
+          secondaryContainer: const Color(0xFFD7E2E3),
+          onSecondaryContainer: const Color(0xFF0B5F76),
+          tertiary: const Color(0xFF8A5A00),
+          onTertiary: const Color(0xFFFFFFFF),
+          tertiaryContainer: const Color(0xFFFCEDCB),
+          onTertiaryContainer: const Color(0xFF8A5A00),
+          error: const Color(0xFFC92A2A),
+          onError: const Color(0xFFFFFFFF),
         );
+
+  /// Corner bracket colour. Decoration, not text, so on paper it can keep the
+  /// bright safety orange (3.4:1 on the panel, clear of the 3:1 for graphics).
+  static Color _bracket(ColorScheme scheme) =>
+      scheme.brightness == Brightness.dark
+      ? scheme.primary
+      : const Color(0xFFE8590C);
 
   static ThemeData _build(ColorScheme scheme) {
     final base = ThemeData(colorScheme: scheme, useMaterial3: true);
     final text = _textTheme(base.textTheme, scheme);
+    // Primary actions take the reference's secondary button rather than a
+    // solid orange slab: the orange as a faint fill, an orange edge and an
+    // orange label — 5.0:1 on dark, 5.3:1 on light. A full-orange FAB was the
+    // loudest thing on every screen.
+    final dark = scheme.brightness == Brightness.dark;
+    final actionFill = Color.alphaBlend(
+      scheme.primary.withValues(alpha: dark ? 0.18 : 0.10),
+      scheme.surfaceContainerLow,
+    );
+    final actionInk = scheme.primary;
+    final actionEdge = BorderSide(
+      color: scheme.primary.withValues(alpha: 0.45),
+    );
     return base.copyWith(
       textTheme: text,
-      scaffoldBackgroundColor: scheme.surface,
+      // Transparent so the grid shows; each route paints its own backdrop,
+      // see `GridBackdrop`.
+      scaffoldBackgroundColor: Colors.transparent,
+      pageTransitionsTheme: GridPageTransitionsBuilder.theme(),
 
       // Icon mặc định nhỉnh hơn 24 một chút và dùng màu chữ phụ — icon xám nhạt
       // của Material đọc rất mờ trên nền sáng.
@@ -267,9 +281,12 @@ class AppTheme {
         // Bigger than titleLarge's 22: the header is the only anchor on pages
         // that are otherwise a wall of rows and numbers. Set here rather than
         // on titleLarge itself, which dialogs also use.
+        // Mono runs wider than the sans it replaced, hence 22 rather than
+        // 26 — `BrandTitle` still scales down on narrow phones.
         titleTextStyle: text.titleLarge?.copyWith(
-          fontSize: 26,
+          fontSize: 22,
           fontWeight: FontWeight.w700,
+          letterSpacing: 1.2,
           color: scheme.onSurface,
         ),
         actionsIconTheme: IconThemeData(size: 26, color: scheme.primary),
@@ -283,9 +300,9 @@ class AppTheme {
         color: scheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
+        shape: BracketBorder(
           side: BorderSide(color: scheme.outlineVariant),
+          bracketColor: _bracket(scheme),
         ),
       ),
 
@@ -295,7 +312,9 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         indicatorColor: scheme.primaryContainer,
-        indicatorShape: const StadiumBorder(),
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+        ),
         // Luôn hiện nhãn: ba tab tên tiếng Việt, chỉ nhìn icon rất dễ đoán nhầm.
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         iconTheme: WidgetStateProperty.resolveWith(
@@ -323,8 +342,8 @@ class AppTheme {
       ),
 
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: scheme.primary,
-        foregroundColor: scheme.onPrimary,
+        backgroundColor: actionFill,
+        foregroundColor: actionInk,
         elevation: 2,
         focusElevation: 2,
         hoverElevation: 3,
@@ -332,9 +351,12 @@ class AppTheme {
         iconSize: 26,
         extendedTextStyle: text.labelLarge?.copyWith(
           fontWeight: FontWeight.w700,
-          color: scheme.onPrimary,
+          color: actionInk,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: actionEdge,
+        ),
       ),
 
       listTileTheme: ListTileThemeData(
@@ -350,9 +372,18 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(64, 48),
+          backgroundColor: actionFill,
+          foregroundColor: actionInk,
           textStyle: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(6),
+          ),
+        ).copyWith(
+          // A disabled button loses the edge too, or it still reads as live.
+          side: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.disabled)
+                ? BorderSide.none
+                : actionEdge,
           ),
         ),
       ),
@@ -367,7 +398,7 @@ class AppTheme {
           minimumSize: const Size(64, 48),
           textStyle: text.labelLarge?.copyWith(fontWeight: FontWeight.w600),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(6),
           ),
         ),
       ),
@@ -376,6 +407,7 @@ class AppTheme {
           selectedBackgroundColor: scheme.primaryContainer,
           selectedForegroundColor: scheme.onPrimaryContainer,
           textStyle: text.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         ),
       ),
 
@@ -425,7 +457,7 @@ class AppTheme {
                 : scheme.outlineVariant,
           ),
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
 
       inputDecorationTheme: InputDecorationTheme(
@@ -433,15 +465,15 @@ class AppTheme {
         fillColor: scheme.surfaceContainerHigh,
         labelStyle: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(6),
           borderSide: BorderSide(color: scheme.outlineVariant),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(6),
           borderSide: BorderSide(color: scheme.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(6),
           borderSide: BorderSide(color: scheme.primary, width: 2),
         ),
       ),
@@ -458,14 +490,17 @@ class AppTheme {
         contentTextStyle: text.bodyMedium?.copyWith(
           color: scheme.onInverseSurface,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),
 
       dialogTheme: DialogThemeData(
         backgroundColor: scheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
         titleTextStyle: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: BracketBorder(
+          side: BorderSide(color: scheme.outlineVariant),
+          bracketColor: _bracket(scheme),
+        ),
       ),
 
       bottomSheetTheme: BottomSheetThemeData(
@@ -473,7 +508,7 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         showDragHandle: true,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
         ),
       ),
 
@@ -481,7 +516,7 @@ class AppTheme {
         color: scheme.surfaceContainerHigh,
         surfaceTintColor: Colors.transparent,
         textStyle: text.bodyMedium,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),
 
       switchTheme: SwitchThemeData(
@@ -508,22 +543,31 @@ class AppTheme {
 
   /// Chữ to hơn mặc định một nấc, tiêu đề đậm hơn, và số dùng chữ số đều bề
   /// ngang (tabular) để các cột tiền thẳng hàng khi đọc lướt.
+  ///
+  /// Headlines, the app bar title and every label are set in the mono face,
+  /// as the reference sets its numerals and its spaced-out captions. Titles
+  /// and body stay in the sans: they carry names and sentences, and a whole
+  /// screen of Vietnamese prose in mono is tiring to read.
   static TextTheme _textTheme(TextTheme base, ColorScheme scheme) {
     const tabular = [FontFeature.tabularFigures()];
+    const mono = MissionStyle.mono;
     return base.copyWith(
       headlineSmall: base.headlineSmall?.copyWith(
-        fontWeight: FontWeight.w700,
+        fontFamily: mono,
+        fontWeight: FontWeight.w500,
         letterSpacing: -0.4,
         fontFeatures: tabular,
       ),
       headlineMedium: base.headlineMedium?.copyWith(
-        fontWeight: FontWeight.w700,
+        fontFamily: mono,
+        fontWeight: FontWeight.w500,
         letterSpacing: -0.5,
         fontFeatures: tabular,
       ),
       titleLarge: base.titleLarge?.copyWith(
+        fontFamily: mono,
         fontWeight: FontWeight.w700,
-        letterSpacing: -0.2,
+        letterSpacing: 0.4,
         fontFeatures: tabular,
       ),
       titleMedium: base.titleMedium?.copyWith(
@@ -547,13 +591,23 @@ class AppTheme {
         color: scheme.onSurfaceVariant,
       ),
       labelLarge: base.labelLarge?.copyWith(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
+        fontFamily: mono,
+        fontSize: 13.5,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.8,
       ),
       labelMedium: base.labelMedium?.copyWith(
-        fontSize: 12.5,
-        fontWeight: FontWeight.w600,
+        fontFamily: mono,
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 1.4,
         color: scheme.onSurfaceVariant,
+        fontFeatures: tabular,
+      ),
+      labelSmall: base.labelSmall?.copyWith(
+        fontFamily: mono,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 1.4,
         fontFeatures: tabular,
       ),
     );

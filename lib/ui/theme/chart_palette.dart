@@ -15,38 +15,42 @@ class ChartPalette {
   const ChartPalette._(this._series, this.incomeMark, this.expenseMark,
       this.incomeText, this.expenseText, this.other);
 
-  /// Bộ màu cho nền sáng.
+  /// Light set: the ARES hues darkened for paper. Marks clear 3:1 on the
+  /// base except amber (3.0:1), text colours clear 4.5:1. Adjacent pairs sit
+  /// at ΔE ≥ 13 on OKLab, deuteranopia and protanopia included.
   static const light = ChartPalette._(
     [
-      Color(0xFFEB6834), // cam
-      Color(0xFF2A78D6), // xanh dương
-      Color(0xFF1BAF7A), // ngọc
-      Color(0xFFEDA100), // vàng
-      Color(0xFFE87BA4), // hồng
-      Color(0xFF008300), // lục
+      Color(0xFFE8590C), // orange
+      Color(0xFF0A8FB3), // cyan
+      Color(0xFFB57A00), // amber
+      Color(0xFFD6336C), // pink
+      Color(0xFF7048E8), // violet
+      Color(0xFF495057), // slate
     ],
-    Color(0xFF1BAF7A),
-    Color(0xFFEB6834),
-    Color(0xFF0F7A55),
-    Color(0xFFA8431C),
-    Color(0xFF9E9E96),
+    Color(0xFF0A8FB3),
+    Color(0xFFE8590C),
+    Color(0xFF0E7490),
+    Color(0xFFB23C0A),
+    Color(0xFF9A9EA5),
   );
 
-  /// Bộ màu cho nền tối — cùng dải màu nhưng chọn lại độ sáng cho nền đậm.
+  /// Dark set, from the ARES palette: expense is its safety orange, income
+  /// its data cyan. The other slots extend it with hues it lacks. Adjacent
+  /// pairs sit at ΔE ≥ 16.9 on OKLab, deuteranopia and protanopia included.
   static const dark = ChartPalette._(
     [
-      Color(0xFFD95926),
-      Color(0xFF3987E5),
-      Color(0xFF199E70),
-      Color(0xFFC98500),
-      Color(0xFFD55181),
-      Color(0xFF008300),
+      Color(0xFFFF6B1A), // orange
+      Color(0xFF4EE1FF), // cyan
+      Color(0xFFFFB000), // amber
+      Color(0xFFFF5C8A), // pink
+      Color(0xFFA98BFF), // lavender
+      Color(0xFFD8D6D2), // off-white
     ],
-    Color(0xFF199E70),
-    Color(0xFFD95926),
-    Color(0xFF4ECFA0),
-    Color(0xFFFF8A5C),
-    Color(0xFF8A8A82),
+    Color(0xFF4EE1FF),
+    Color(0xFFFF6B1A),
+    Color(0xFF4EE1FF),
+    Color(0xFFFF8A4C),
+    Color(0xFF5B6068),
   );
 
   final List<Color> _series;

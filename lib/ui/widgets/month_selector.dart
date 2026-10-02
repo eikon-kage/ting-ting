@@ -37,7 +37,7 @@ class MonthSelector extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(6),
               border: Border.all(color: theme.colorScheme.outlineVariant),
             ),
             child: Row(

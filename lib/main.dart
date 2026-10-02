@@ -6,6 +6,7 @@ import 'services/digest_alerts.dart';
 import 'services/summary_widget.dart';
 import 'services/txn_alerts.dart';
 import 'ui/controllers/category_catalog.dart';
+import 'ui/controllers/theme_controller.dart';
 import 'ui/root_shell.dart';
 import 'ui/theme/app_theme.dart';
 
@@ -14,6 +15,8 @@ Future<void> main() async {
   await TxnAlerts.instance.init();
   // Danh sách nhóm phải sẵn sàng trước khi có màn nào vẽ ô chọn nhóm.
   await CategoryCatalog.instance.init();
+  // Before the first frame, or a light-theme user watches the app open dark.
+  await ThemeController.instance.init();
   // Không chờ: widget ngoài màn hình chính cập nhật xong lúc nào cũng được,
   // đừng để nó làm chậm khung hình đầu tiên.
   unawaited(SummaryWidget.instance.init());
@@ -27,17 +30,20 @@ class TingTingApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Ting Ting',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      // Pinned to dark rather than following the system. The dark scheme is
-      // the intended look; leaving it on the system setting meant most phones
-      // showed the light one and the dark scheme was rarely seen. Drop this
-      // line to hand the choice back to the OS.
-      themeMode: ThemeMode.dark,
-      home: const RootShell(),
+    final theme = ThemeController.instance;
+    return ListenableBuilder(
+      listenable: theme,
+      builder: (context, _) => MaterialApp(
+        title: 'Ting Ting',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        // The user's pick from the ⋮ menu; dark until they make one, not the
+        // system setting — most phones are light and the dark scheme is the
+        // intended look.
+        themeMode: theme.mode,
+        home: const RootShell(),
+      ),
     );
   }
 }

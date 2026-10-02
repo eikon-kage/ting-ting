@@ -367,7 +367,7 @@ class _QrCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
       decoration: BoxDecoration(
         color: _cardSurface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: _cardLine),
       ),
       child: Column(
@@ -478,7 +478,7 @@ class _QrPlaceholder extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         border: Border.all(color: _cardLine),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: const Center(
         child: Padding(

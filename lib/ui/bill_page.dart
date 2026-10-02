@@ -271,7 +271,7 @@ class _Totals extends StatelessWidget {
       margin: const EdgeInsets.all(16),
       color: theme.colorScheme.primaryContainer,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(10),
         side: BorderSide(
           color: theme.colorScheme.primary.withValues(alpha: 0.25),
         ),
