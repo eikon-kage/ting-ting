@@ -1,3 +1,4 @@
+import 'category.dart';
 import 'txn.dart';
 
 /// Tổng chi của một nhóm trong kỳ báo cáo.
@@ -65,7 +66,12 @@ class WalletBalances {
 
 /// Tổng thu / chi của một tập giao dịch.
 class TxnTotals {
-  const TxnTotals({required this.income, required this.expense});
+  const TxnTotals({
+    required this.income,
+    required this.expense,
+    this.shareBill = 0,
+    this.borrowed = 0,
+  });
 
   static const zero = TxnTotals(income: 0, expense: 0);
 
@@ -73,21 +79,50 @@ class TxnTotals {
   factory TxnTotals.of(Iterable<Txn> txns) {
     var income = 0;
     var expense = 0;
+    var shareBill = 0;
+    var borrowed = 0;
     for (final txn in txns) {
       if (!txn.countsInReport) continue;
       if (txn.direction == TxnDirection.income) {
         income += txn.amount;
+        final kind = txn.incomeKind;
+        if (kind == IncomeKind.shareBill) shareBill += txn.amount;
+        if (kind == IncomeKind.borrowed) borrowed += txn.amount;
       } else {
         expense += txn.amount;
       }
     }
-    return TxnTotals(income: income, expense: expense);
+    return TxnTotals(
+      income: income,
+      expense: expense,
+      shareBill: shareBill,
+      borrowed: borrowed,
+    );
   }
 
+  /// Toàn bộ tiền vào, cả ba kiểu. Đây là số tiền thật sự chạy vào ví trong kỳ
+  /// nên nó phải trọn vẹn; muốn biết bao nhiêu là của mình thì xem [earned].
   final int income;
+
   final int expense;
 
+  /// Phần [income] là người cùng bill trả lại phần của họ.
+  final int shareBill;
+
+  /// Phần [income] là tiền mình vay của người khác.
+  final int borrowed;
+
+  /// Tiền mình thật sự kiếm được trong kỳ.
+  int get earned => income - shareBill - borrowed;
+
   int get net => income - expense;
+
+  /// Số mình thật sự tiêu: ứng một triệu trả cả bàn rồi được trả lại bảy trăm
+  /// nghìn thì mình tiêu ba trăm nghìn, không phải một triệu.
+  ///
+  /// Chặn ở 0 vì tiền chia bill hay về sau khoản chi cả một kỳ — thu tháng này
+  /// phần bữa ăn tháng trước là chuyện thường, mà "đã chi âm" thì vô nghĩa.
+  int get netExpense => expense > shareBill ? expense - shareBill : 0;
 }
 
 /// Giao dịch của một ngày, kèm số dư ròng trong ngày đó.

@@ -3,6 +3,41 @@ import '../core/text.dart';
 /// Kết quả khi ghi một nhóm — UI tự dịch ra câu báo cho user.
 enum CategorySaveResult { ok, nameEmpty, nameTaken }
 
+/// Ba kiểu tiền vào. Cùng làm số dư tăng lên nhưng không cùng nghĩa: chỉ
+/// [earned] là tiền mình kiếm được, hai kiểu còn lại là tiền của người khác
+/// đang tạm nằm trong ví mình.
+enum IncomeKind {
+  /// Lương, thưởng, bán được cái gì — tiền thật sự kiếm ra.
+  earned,
+
+  /// Người cùng bill trả lại phần của họ. Không phải thu nhập mà là tiền bù
+  /// cho khoản mình đã ứng ra trả cho cả nhóm.
+  shareBill,
+
+  /// Mình vay của người khác, sau này phải trả lại.
+  borrowed,
+}
+
+extension IncomeKindX on IncomeKind {
+  String get label => switch (this) {
+    IncomeKind.earned => 'Kiếm được',
+    IncomeKind.shareBill => 'Chia bill',
+    IncomeKind.borrowed => 'Tiền vay',
+  };
+
+  /// Nhóm chi tiêu nói luôn đây là kiểu tiền vào nào — user không phải chọn
+  /// thêm một lần nữa.
+  ///
+  /// Nhóm user tự đặt cho một khoản thu (thưởng, bán đồ cũ, tiền cho thuê...)
+  /// đều là [earned]: mặc định phải là "kiếm được" chứ không phải "tiền của
+  /// người khác", đoán nhầm hướng kia là báo hụt thu nhập mà không ai thấy.
+  static IncomeKind fromCategory(String category) => switch (category) {
+    Category.shareBill => IncomeKind.shareBill,
+    Category.borrowed => IncomeKind.borrowed,
+    _ => IncomeKind.earned,
+  };
+}
+
 /// Một nhóm chi tiêu. User tự thêm, sửa, xoá ở màn "Nhóm chi tiêu".
 ///
 /// Nhóm mang luôn bộ từ khoá dùng để đoán nhóm cho giao dịch mới: sửa nhóm là
@@ -24,15 +59,39 @@ class Category {
     sortOrder: map['sort_order'] as int? ?? 0,
   );
 
-  /// Ba nhóm mà phần mềm tự nhắc tới tên: giao dịch nhập tay và khoản nợ rơi
-  /// vào [uncategorized], tiền vào mặc định là [income], còn [withdrawal] là
-  /// dấu hiệu để coi một khoản rút ATM là chuyển ví chứ không phải khoản chi.
-  /// Xoá hay đổi tên chúng thì các quy tắc đó gãy, nên chúng là nhóm hệ thống.
+  /// Năm nhóm mà phần mềm tự nhắc tới tên: giao dịch nhập tay và khoản nợ rơi
+  /// vào [uncategorized], tiền vào mặc định là [income], [shareBill] và
+  /// [borrowed] là hai kiểu tiền vào không phải tiền kiếm được, còn
+  /// [withdrawal] là dấu hiệu để coi một khoản rút ATM là chuyển ví chứ không
+  /// phải khoản chi. Xoá hay đổi tên chúng thì các quy tắc đó gãy, nên chúng là
+  /// nhóm hệ thống.
   static const String uncategorized = 'Khác';
-  static const String income = 'Thu nhập';
+
+  /// Chỗ mọi khoản tiền vào rơi vào khi chưa ai nói nó thuộc kiểu nào — lương
+  /// là kiểu tiền vào thường gặp nhất và cũng là kiểu duy nhất kiếm ra được.
+  static const String income = 'Lương';
+
+  /// Người cùng bill trả lại phần của họ trong khoản mình đã ứng ra trả cho cả
+  /// nhóm. Tiền vào ví nhưng không phải kiếm được: nó bù cho một khoản đã chi.
+  static const String shareBill = 'Chia bill';
+
+  /// Tiền mình vay của người khác — vào ví hôm nay, phải trả lại sau.
+  static const String borrowed = 'Tiền vay';
+
   static const String withdrawal = 'Rút tiền';
 
-  static const Set<String> builtInNames = {uncategorized, income, withdrawal};
+  static const Set<String> builtInNames = {
+    uncategorized,
+    income,
+    shareBill,
+    borrowed,
+    withdrawal,
+  };
+
+  /// Những nhóm chỉ dành cho tiền vào. Đoán nhóm cho một khoản thu chỉ xét từ
+  /// khoá của mấy nhóm này — từ khoá "nhà hàng" của nhóm Ăn uống không được
+  /// phép nuốt một khoản tiền vào.
+  static const Set<String> incomeNames = {income, shareBill, borrowed};
 
   final int? id;
   final String name;
@@ -86,8 +145,20 @@ class Category {
 const List<Category> defaultCategories = [
   Category(name: Category.income, builtIn: true, sortOrder: 0),
   Category(
-    name: 'Ăn uống',
+    name: Category.shareBill,
+    builtIn: true,
     sortOrder: 1,
+    keywords: ['chia bill', 'share bill', 'tien bill', 'gop tien', 'chia tien'],
+  ),
+  Category(
+    name: Category.borrowed,
+    builtIn: true,
+    sortOrder: 2,
+    keywords: ['vay tien', 'tien vay', 'muon tien', 'di vay'],
+  ),
+  Category(
+    name: 'Ăn uống',
+    sortOrder: 3,
     keywords: [
       'highlands',
       'starbucks',
@@ -106,7 +177,7 @@ const List<Category> defaultCategories = [
   ),
   Category(
     name: 'Đi lại',
-    sortOrder: 2,
+    sortOrder: 4,
     keywords: [
       'grab',
       'be group',
@@ -126,7 +197,7 @@ const List<Category> defaultCategories = [
   ),
   Category(
     name: 'Mua sắm',
-    sortOrder: 3,
+    sortOrder: 5,
     keywords: [
       'shopee',
       'lazada',
@@ -144,7 +215,7 @@ const List<Category> defaultCategories = [
   ),
   Category(
     name: 'Hoá đơn',
-    sortOrder: 4,
+    sortOrder: 6,
     keywords: [
       'evn',
       'tien dien',
@@ -161,7 +232,7 @@ const List<Category> defaultCategories = [
   ),
   Category(
     name: 'Sức khoẻ',
-    sortOrder: 5,
+    sortOrder: 7,
     keywords: [
       'benh vien',
       'phong kham',
@@ -174,7 +245,7 @@ const List<Category> defaultCategories = [
   ),
   Category(
     name: 'Giải trí',
-    sortOrder: 6,
+    sortOrder: 8,
     keywords: [
       'netflix',
       'spotify',
@@ -189,13 +260,13 @@ const List<Category> defaultCategories = [
   Category(
     name: Category.withdrawal,
     builtIn: true,
-    sortOrder: 7,
+    sortOrder: 9,
     keywords: ['rut tien', 'atm', 'withdrawal'],
   ),
   Category(
     name: 'Chuyển khoản',
-    sortOrder: 8,
+    sortOrder: 10,
     keywords: ['chuyen tien', 'chuyen khoan', 'ck den', 'ck di', 'ib ft'],
   ),
-  Category(name: Category.uncategorized, builtIn: true, sortOrder: 9),
+  Category(name: Category.uncategorized, builtIn: true, sortOrder: 11),
 ];

@@ -94,7 +94,11 @@ class SummaryWidget {
     try {
       await _channel.invokeMethod<void>('update', <String, String>{
         'label': 'Đã chi tháng ${month.month}',
-        'amount': formatMoney(totals.expense),
+        // Số chi đã trừ phần người ta trả lại tiền bill: ứng tiền trả cả bàn
+        // rồi được hoàn lại thì phần hoàn không phải tiền mình tiêu. Ô "Thu"
+        // bên dưới vẫn là trọn tiền vào, nên nó trừ số này ra không bằng "Còn
+        // lại" — cố ý: "Còn lại" là tiền thật đổi trong tháng.
+        'amount': formatMoney(totals.netExpense),
         'income': formatMoney(totals.income),
         'net': formatMoney(totals.net),
         'balance': hasWallet

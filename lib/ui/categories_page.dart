@@ -7,9 +7,11 @@ import 'widgets/empty_state.dart';
 
 /// Quản lý nhóm chi tiêu: thêm, sửa tên và từ khoá, xoá.
 ///
-/// Ba nhóm "Thu nhập", "Rút tiền", "Khác" là nhóm hệ thống — phần mềm tự nhắc
-/// tới tên chúng (tiền vào mặc định là Thu nhập, rút ATM được coi là chuyển ví,
-/// khoản chưa phân loại rơi vào Khác) nên chỉ sửa được từ khoá.
+/// Năm nhóm "Lương", "Chia bill", "Tiền vay", "Rút tiền", "Khác" là nhóm hệ
+/// thống — phần mềm tự nhắc tới tên chúng (tiền vào mặc định là Lương, khoản
+/// người ta trả lại tiền bill được trừ khỏi số đã chi, tiền vay là tiền phải
+/// trả lại chứ không phải kiếm được, rút ATM được coi là chuyển ví, khoản chưa
+/// phân loại rơi vào Khác) nên chỉ sửa được từ khoá.
 class CategoriesPage extends StatefulWidget {
   const CategoriesPage({super.key});
 

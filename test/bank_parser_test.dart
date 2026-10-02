@@ -128,7 +128,7 @@ void main() {
       );
       expect(
         Categorizer.categorize('bat ky', TxnDirection.income).category,
-        'Thu nhập',
+        Category.income,
       );
     });
 

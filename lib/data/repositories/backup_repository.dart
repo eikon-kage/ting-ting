@@ -78,6 +78,10 @@ class BackupRepository {
       );
     }
 
+    // Nạp xong mới kéo lên đời schema hiện tại: file cũ mang tên nhóm của đời
+    // nó, sửa trước khi các dòng vào bảng thì chẳng có gì để sửa.
+    await _backup.upgradeRestored(data.schema);
+
     _changes.markChanged();
     return RestoreReport(mode: mode, added: added);
   }

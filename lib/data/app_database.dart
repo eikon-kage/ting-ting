@@ -96,6 +96,92 @@ const String createBillItemsIndex =
     'CREATE INDEX IF NOT EXISTS idx_bill_items_bill '
     'ON bill_items (bill_key)';
 
+/// Tên nhóm tiền vào trước khi tiền vào được tách làm ba kiểu.
+const String legacyIncomeCategory = 'Thu nhập';
+
+/// Đời schema mà [splitIncomeCategories] dựng nên. Bản sao lưu cũ hơn con số
+/// này còn mang tên nhóm cũ nên nạp xong phải chạy lại phép tách ấy.
+const int incomeCategorySchema = 6;
+
+/// Tách tiền vào làm ba nhóm hệ thống trên máy đã có dữ liệu.
+///
+/// Nhóm "Thu nhập" cũ đổi tên thành "Lương": nó vẫn giữ đúng vai trò ấy — chỗ
+/// mọi khoản tiền vào rơi vào khi chưa ai nói nó thuộc kiểu nào — nên đổi tên
+/// đúng hơn là dựng nhóm mới rồi bỏ nhóm cũ nằm đấy. Giao dịch và quy tắc đang
+/// mang tên cũ phải được kéo theo, nếu không cả một mảng thu nhập cũ rớt khỏi
+/// nhóm của nó.
+Future<void> splitIncomeCategories(Database db) async {
+  final taken =
+      Sqflite.firstIntValue(
+        await db.rawQuery(
+          'SELECT COUNT(*) FROM ${Tables.categories} WHERE name = ?',
+          [Category.income],
+        ),
+      ) ??
+      0;
+  if (taken > 0) {
+    // User đã tự tạo một nhóm trùng đúng tên mới. Cột `name` là UNIQUE nên
+    // không đổi tên được — gộp về nhóm của user thay vì để hai nhóm cùng tên.
+    await db.delete(
+      Tables.categories,
+      where: 'name = ?',
+      whereArgs: [legacyIncomeCategory],
+    );
+  } else {
+    await db.update(
+      Tables.categories,
+      {'name': Category.income},
+      where: 'name = ?',
+      whereArgs: [legacyIncomeCategory],
+    );
+  }
+  for (final table in [Tables.txns, Tables.rules]) {
+    await db.update(
+      table,
+      {'category': Category.income},
+      where: 'category = ?',
+      whereArgs: [legacyIncomeCategory],
+    );
+  }
+
+  // Hai nhóm còn lại xếp ngay sau nhóm lương: danh sách sắp theo `sort_order`
+  // rồi tới `id`, nên cùng số thứ tự là chúng đứng liền sau.
+  final order =
+      Sqflite.firstIntValue(
+        await db.rawQuery(
+          'SELECT sort_order FROM ${Tables.categories} WHERE name = ?',
+          [Category.income],
+        ),
+      ) ??
+      0;
+  for (final category in defaultCategories) {
+    if (!Category.incomeNames.contains(category.name)) continue;
+    final exists =
+        Sqflite.firstIntValue(
+          await db.rawQuery(
+            'SELECT COUNT(*) FROM ${Tables.categories} WHERE name = ?',
+            [category.name],
+          ),
+        ) ??
+        0;
+    if (exists == 0) {
+      await db.insert(
+        Tables.categories,
+        category.copyWith(sortOrder: order).toMap(),
+      );
+      continue;
+    }
+    // Nhóm đã có sẵn — của user hay là nhóm lương vừa đổi tên. Phần mềm tự
+    // nhắc tới ba tên này nên chúng phải là nhóm hệ thống, không cho xoá.
+    await db.update(
+      Tables.categories,
+      {'built_in': 1},
+      where: 'name = ?',
+      whereArgs: [category.name],
+    );
+  }
+}
+
 /// Đổ bộ nhóm dựng sẵn vào bảng rỗng.
 ///
 /// Chỉ chạy khi bảng chưa có gì: user đã sửa danh sách của mình thì không ai
@@ -127,7 +213,7 @@ class AppDatabase {
 
   /// Đời schema hiện tại. Bản sao lưu ghi kèm con số này để lúc nạp còn biết
   /// file có mới hơn bản app đang chạy hay không.
-  static const int schemaVersion = 5;
+  static const int schemaVersion = 6;
 
   Database? _db;
 
@@ -154,6 +240,7 @@ class AppDatabase {
   /// dịch đã lưu vẫn khớp tên nhóm.
   /// v3 -> v4: thêm bảng cài đặt khoá–giá trị.
   /// v4 -> v5: thêm hai bảng chia bill.
+  /// v5 -> v6: tiền vào tách làm ba nhóm — Lương, Chia bill, Tiền vay.
   Future<void> _upgradeSchema(Database db, int from, int to) async {
     if (from < 2) await db.execute(createParserProfilesTable);
     if (from < 3) {
@@ -166,6 +253,7 @@ class AppDatabase {
       await db.execute(createBillItemsTable);
       await db.execute(createBillItemsIndex);
     }
+    if (from < incomeCategorySchema) await splitIncomeCategories(db);
   }
 
   Future<void> _createSchema(Database db, int version) async {

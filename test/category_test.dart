@@ -81,7 +81,9 @@ void main() {
       expect(suggestion.excluded, isTrue);
     });
 
-    test('tiền vào luôn là Thu nhập, không xét từ khoá', () {
+    test('tiền vào không ăn từ khoá của nhóm chi', () {
+      // "hoc phi" là từ khoá của nhóm Con cái, nhưng nhóm đó dành cho khoản
+      // chi — tiền vào rơi về nhóm mặc định.
       expect(
         Categorizer.categorize(
           'Nhan tien hoc phi',
@@ -167,7 +169,7 @@ void main() {
   });
 
   group('Bộ nhóm dựng sẵn', () {
-    test('có đủ ba nhóm hệ thống và chúng được đánh dấu không xoá được', () {
+    test('nhóm hệ thống nào cũng có mặt và được đánh dấu không xoá được', () {
       for (final name in Category.builtInNames) {
         final category = defaultCategories.firstWhere((c) => c.name == name);
         expect(category.builtIn, isTrue, reason: name);

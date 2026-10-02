@@ -33,6 +33,16 @@ class BackupDao {
 
   int get schemaVersion => AppDatabase.schemaVersion;
 
+  /// Kéo dữ liệu vừa nạp từ một file đời [schema] lên đời hiện tại.
+  ///
+  /// File cũ hơn vẫn được phép nạp, nên nó mang theo cả những chỗ mà đời schema
+  /// sau đã đổi — tên nhóm tiền vào chẳng hạn. Không sửa lại thì trên máy có
+  /// hai nhóm tiền vào song song, một cái phần mềm không còn nhắc tới nữa.
+  Future<void> upgradeRestored(int schema) async {
+    if (schema >= incomeCategorySchema) return;
+    await splitIncomeCategories(await _database);
+  }
+
   Future<List<Map<String, Object?>>> dump(String table) async {
     final db = await _database;
     return db.query(table);

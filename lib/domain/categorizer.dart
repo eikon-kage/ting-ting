@@ -18,6 +18,8 @@ class CategorySuggestion {
 /// đọc từ tầng dữ liệu xuống. Bộ dựng sẵn chỉ là chỗ dựa cho test.
 class Categorizer {
   static const String uncategorized = Category.uncategorized;
+
+  /// Nhóm mặc định của tiền vào khi nội dung giao dịch không nói gì thêm.
   static const String income = Category.income;
 
   /// Rút tiền ATM chỉ là chuyển tiền sang ví tiền mặt, không phải khoản chi.
@@ -39,7 +41,18 @@ class Categorizer {
         );
       }
     }
+    // Tiền vào chỉ xét từ khoá của mấy nhóm dành cho tiền vào: "nhà hàng" của
+    // nhóm Ăn uống mà cũng được xét thì một khoản người ta trả lại tiền bữa ăn
+    // sẽ bị xếp vào nhóm chi. Không nhóm nào nhận thì rơi về [income].
     if (direction == TxnDirection.income) {
+      for (final category in categories) {
+        if (!Category.incomeNames.contains(category.name)) continue;
+        for (final keyword in category.keywords) {
+          if (flat.contains(keyword)) {
+            return CategorySuggestion(category: category.name);
+          }
+        }
+      }
       return const CategorySuggestion(category: income);
     }
     for (final category in categories) {

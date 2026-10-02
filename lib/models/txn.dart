@@ -1,3 +1,5 @@
+import 'category.dart';
+
 /// Tiền nằm ở đâu. Dòng tiền được theo dõi tách làm hai ví.
 enum AccountKind {
   /// Tài khoản ngân hàng / ví điện tử — số liệu tự lấy từ thông báo.
@@ -188,6 +190,14 @@ class Txn {
 
   /// Chỉ những giao dịch này mới được cộng vào báo cáo Thu–Chi.
   bool get countsInReport => !excluded && debtType == null && !isTransfer;
+
+  /// Kiểu tiền vào, `null` với khoản chi.
+  ///
+  /// Suy ra từ nhóm chi tiêu chứ không phải một cột riêng: gán nhóm "Chia bill"
+  /// là user đã nói xong đây là tiền người ta trả lại, không phải chọn thêm.
+  IncomeKind? get incomeKind => direction == TxnDirection.income
+      ? IncomeKindX.fromCategory(category)
+      : null;
 
   /// Dấu của giao dịch trong một tổng: thu là cộng, chi là trừ.
   int get signedAmount =>
