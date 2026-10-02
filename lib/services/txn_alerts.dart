@@ -8,6 +8,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../core/money.dart';
 import '../data/data_store.dart';
 import '../domain/categorizer.dart';
+import '../domain/repayment_match.dart';
 import '../models/models.dart';
 
 /// Mã các nút bấm trên thông báo giao dịch.
@@ -22,6 +23,10 @@ class AlertAction {
   static const String note = 'note';
   static const String exclude = 'exclude';
   static const String edit = 'edit';
+
+  /// Takes the place of [exclude] when the money looks like a repayment:
+  /// money someone owed you back is not something you would leave uncounted.
+  static const String repaid = 'repaid';
 }
 
 const String _channelId = 'txn_alerts';
@@ -98,7 +103,9 @@ class TxnAlerts {
     _ready = true;
   }
 
-  Future<void> show(Txn txn) => _showAlert(_plugin, txn);
+  /// [repayment] turns the alert into the question "did Nam pay you back?".
+  Future<void> show(Txn txn, {RepaymentMatch? repayment}) =>
+      _showAlert(_plugin, txn, repayment: repayment);
 
   Future<void> cancel(int txnId) async {
     if (!Platform.isAndroid) return;
@@ -172,6 +179,15 @@ Future<void> applyAlertAction(
       );
     case AlertAction.exclude:
       await txns.save(txn.copyWith(needsReview: false, excluded: true));
+    case AlertAction.repaid:
+      final repayments = DataStore.instance.repayments;
+      final match = await repayments.matchFor(txn);
+      // Marked some other way since the alert went out: nothing left to ask.
+      if (match == null || !await repayments.confirm(txn, match)) {
+        await _pluginFor(plugin).cancel(id: txnId);
+        return;
+      }
+      await _confirmRepaid(_pluginFor(plugin), txn, match);
   }
 }
 
@@ -194,9 +210,16 @@ FlutterLocalNotificationsPlugin _pluginFor(
   FlutterLocalNotificationsPlugin? plugin,
 ) => plugin ?? FlutterLocalNotificationsPlugin();
 
-Future<void> _showAlert(FlutterLocalNotificationsPlugin plugin, Txn txn) async {
+Future<void> _showAlert(
+  FlutterLocalNotificationsPlugin plugin,
+  Txn txn, {
+  RepaymentMatch? repayment,
+}) async {
   if (!Platform.isAndroid || txn.id == null) return;
-  final body = _alertBody(txn);
+  final body = [
+    _alertBody(txn),
+    if (repayment != null) '🤝 ${repayment.question}',
+  ].join('\n');
   final details = AndroidNotificationDetails(
     _channelId,
     _channelName,
@@ -204,8 +227,10 @@ Future<void> _showAlert(FlutterLocalNotificationsPlugin plugin, Txn txn) async {
     priority: Priority.defaultPriority,
     // Màu tô icon trên thanh trạng thái — `primary` của scheme tối.
     color: _accent,
-    actions: const [
-      AndroidNotificationAction(
+    actions: [
+      if (repayment != null)
+        const AndroidNotificationAction(AlertAction.repaid, 'Đúng, đã trả'),
+      const AndroidNotificationAction(
         AlertAction.note,
         'Ghi chú',
         // Giữ thông báo lại: gửi xong còn vẽ đè lên để báo đã lưu.
@@ -214,8 +239,9 @@ Future<void> _showAlert(FlutterLocalNotificationsPlugin plugin, Txn txn) async {
           AndroidNotificationActionInput(label: 'Ghi chú cho giao dịch này'),
         ],
       ),
-      AndroidNotificationAction(AlertAction.exclude, 'Không tính'),
-      AndroidNotificationAction(
+      if (repayment == null)
+        const AndroidNotificationAction(AlertAction.exclude, 'Không tính'),
+      const AndroidNotificationAction(
         AlertAction.edit,
         'Sửa',
         showsUserInterface: true,
@@ -251,6 +277,42 @@ Future<void> _confirmNote(
     priority: Priority.defaultPriority,
     color: _accent,
     // Chỉ là lời xác nhận, đừng kêu thêm lần nữa.
+    silent: true,
+    onlyAlertOnce: true,
+    timeoutAfter: _confirmTimeoutMs,
+    styleInformation: BigTextStyleInformation(
+      body,
+      contentTitle: _alertTitle(txn),
+    ),
+  );
+
+  await plugin.show(
+    id: txn.id!,
+    title: _alertTitle(txn),
+    body: body,
+    notificationDetails: NotificationDetails(android: details),
+    payload: '${txn.id}',
+  );
+}
+
+/// Redraws the alert to say the repayment went in, then lets it time out.
+Future<void> _confirmRepaid(
+  FlutterLocalNotificationsPlugin plugin,
+  Txn txn,
+  RepaymentMatch match,
+) async {
+  if (!Platform.isAndroid || txn.id == null) return;
+  final body = switch (match) {
+    DebtRepaymentMatch(:final person) => '✓ Đã ghi $person trả nợ',
+    BillRepaymentMatch(:final person, :final bill) =>
+      '✓ Đã ghi $person trả phần bill "${bill.title}"',
+  };
+  final details = AndroidNotificationDetails(
+    _channelId,
+    _channelName,
+    importance: Importance.defaultImportance,
+    priority: Priority.defaultPriority,
+    color: _accent,
     silent: true,
     onlyAlertOnce: true,
     timeoutAfter: _confirmTimeoutMs,

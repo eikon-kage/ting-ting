@@ -1032,6 +1032,12 @@ class _TxnDetailSheetState extends State<TxnDetailSheet> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    _controller.findRepayment();
+  }
+
+  @override
   void dispose() {
     _noteController.dispose();
     _controller.dispose();
@@ -1084,6 +1090,26 @@ class _TxnDetailSheetState extends State<TxnDetailSheet> {
               ),
             ],
             const SizedBox(height: 16),
+            if (_controller.repayment case final repayment?)
+              NoticeBanner(
+                icon: Icons.handshake_rounded,
+                title: repayment.question,
+                message: 'Số tiền và tên người chuyển khớp với khoản đang chờ.',
+                margin: const EdgeInsets.only(bottom: 12),
+                action: Wrap(
+                  spacing: 8,
+                  children: [
+                    FilledButton(
+                      onPressed: _controller.confirmRepayment,
+                      child: const Text('Đúng, đã trả'),
+                    ),
+                    TextButton(
+                      onPressed: _controller.dismissRepayment,
+                      child: const Text('Không phải'),
+                    ),
+                  ],
+                ),
+              ),
             if (txn.needsReview)
               _Notice(
                 text: 'Không chắc đây là tiền vào hay ra — kiểm tra lại giúp.',

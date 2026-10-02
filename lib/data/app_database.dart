@@ -74,9 +74,14 @@ const String createBillsTable =
     title TEXT NOT NULL,
     members TEXT NOT NULL,
     created_at INTEGER NOT NULL,
-    settled INTEGER NOT NULL DEFAULT 0
+    settled INTEGER NOT NULL DEFAULT 0,
+    repaid TEXT
   )
 ''';
+
+/// Schema version that added `bills.repaid`, what each member has already
+/// paid back to the owner of the phone.
+const int billRepaidSchema = 7;
 
 const String createBillItemsTable =
     '''
@@ -213,7 +218,7 @@ class AppDatabase {
 
   /// Đời schema hiện tại. Bản sao lưu ghi kèm con số này để lúc nạp còn biết
   /// file có mới hơn bản app đang chạy hay không.
-  static const int schemaVersion = 6;
+  static const int schemaVersion = billRepaidSchema;
 
   Database? _db;
 
@@ -241,6 +246,7 @@ class AppDatabase {
   /// v3 -> v4: thêm bảng cài đặt khoá–giá trị.
   /// v4 -> v5: thêm hai bảng chia bill.
   /// v5 -> v6: tiền vào tách làm ba nhóm — Lương, Chia bill, Tiền vay.
+  /// v6 -> v7: bills remember who has already paid their share back.
   Future<void> _upgradeSchema(Database db, int from, int to) async {
     if (from < 2) await db.execute(createParserProfilesTable);
     if (from < 3) {
@@ -254,6 +260,10 @@ class AppDatabase {
       await db.execute(createBillItemsIndex);
     }
     if (from < incomeCategorySchema) await splitIncomeCategories(db);
+    // Below v5 the table was just created above with the column already in it.
+    if (from >= 5 && from < billRepaidSchema) {
+      await db.execute('ALTER TABLE ${Tables.bills} ADD COLUMN repaid TEXT');
+    }
   }
 
   Future<void> _createSchema(Database db, int version) async {

@@ -43,6 +43,7 @@ class Bill {
     required this.members,
     required this.createdAt,
     this.settled = false,
+    this.repaid = const {},
   });
 
   /// Tên dành riêng cho chính chủ máy. Có mặt trong mọi bill và không xoá được
@@ -70,6 +71,7 @@ class Bill {
     members: decodeNames(map['members'] as String?),
     createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
     settled: (map['settled'] as int? ?? 0) == 1,
+    repaid: decodeRepaid(map['repaid'] as String?),
   );
 
   final String key;
@@ -83,6 +85,12 @@ class Bill {
   /// Đã đưa tiền cho nhau xong. Bill vẫn nằm lại để tra cứu.
   final bool settled;
 
+  /// What each member has already paid back to [me], by name.
+  ///
+  /// Only money coming to [me] is tracked: that is the only kind the phone's
+  /// bank notifications can see arrive.
+  final Map<String, int> repaid;
+
   /// Những người khác ngoài mình.
   List<String> get others => [
     for (final member in members)
@@ -95,15 +103,30 @@ class Bill {
     'members': encodeNames(members),
     'created_at': createdAt.millisecondsSinceEpoch,
     'settled': settled ? 1 : 0,
+    'repaid': repaid.isEmpty ? null : encodeRepaid(repaid),
   };
 
-  Bill copyWith({String? title, List<String>? members, bool? settled}) => Bill(
+  Bill copyWith({
+    String? title,
+    List<String>? members,
+    bool? settled,
+    Map<String, int>? repaid,
+  }) => Bill(
     key: key,
     title: title ?? this.title,
     members: members ?? this.members,
     createdAt: createdAt,
     settled: settled ?? this.settled,
+    repaid: repaid ?? this.repaid,
   );
+
+  /// The bill after [person] paid [amount] back to [me].
+  Bill withRepayment(String person, int amount) =>
+      copyWith(repaid: {...repaid, person: (repaid[person] ?? 0) + amount});
+
+  /// The bill with [person]'s paybacks forgotten.
+  Bill withoutRepayment(String person) =>
+      copyWith(repaid: {...repaid}..remove(person));
 
   /// Bỏ khoảng trắng thừa và hai ký tự dùng làm dấu phân cách lúc lưu — tên
   /// mang chúng theo thì đọc file ra sẽ tách nhầm.
@@ -129,6 +152,25 @@ class Bill {
   }
 
   static String encodeNames(List<String> names) => names.join('\n');
+
+  /// One line per person, `Nam=150000`, the same shape as [BillItem] shares.
+  static String encodeRepaid(Map<String, int> repaid) => [
+    for (final entry in repaid.entries) '${entry.key}=${entry.value}',
+  ].join('\n');
+
+  static Map<String, int> decodeRepaid(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return const {};
+    final result = <String, int>{};
+    for (final line in raw.split('\n')) {
+      final at = line.lastIndexOf('=');
+      if (at <= 0) continue;
+      final amount = int.tryParse(line.substring(at + 1).trim());
+      if (amount == null || amount <= 0) continue;
+      final person = line.substring(0, at).trim();
+      result[person] = (result[person] ?? 0) + amount;
+    }
+    return result;
+  }
 
   static List<String> decodeNames(String? raw) {
     if (raw == null || raw.trim().isEmpty) return const [];

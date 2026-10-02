@@ -53,6 +53,8 @@ class BillMemberTotal {
     required this.person,
     required this.paid,
     required this.owed,
+    this.paidBack = 0,
+    this.receivedBack = 0,
   });
 
   final String person;
@@ -63,8 +65,17 @@ class BillMemberTotal {
   /// Phần thật sự của người này trong tổng hoá đơn.
   final int owed;
 
+  /// Already handed back to [Bill.me] towards settling up.
+  final int paidBack;
+
+  /// Already received back from the others. Only [Bill.me] has any.
+  final int receivedBack;
+
   /// Dương = trả hộ nhiều hơn phần mình, đang được nhóm nợ.
-  int get net => paid - owed;
+  ///
+  /// Paybacks count here, so this is what is still outstanding: paying your
+  /// share back closes the gap without changing what you paid or owed.
+  int get net => paid - owed + paidBack - receivedBack;
 }
 
 /// Một lần đưa tiền để chốt sổ.
@@ -117,6 +128,11 @@ class BillSettlement {
   /// Dương = mình được nhận lại, âm = mình còn phải đưa.
   int get myNet => memberOf(Bill.me)?.net ?? 0;
 
+  /// What [person] still has to hand to [Bill.me].
+  int owedToMeBy(String person) => transfers
+      .where((t) => t.from == person && t.to == Bill.me)
+      .fold(0, (sum, t) => sum + t.amount);
+
   /// Những lần đưa tiền có mặt mình.
   List<BillTransfer> get myTransfers => [
     for (final transfer in transfers)
@@ -141,6 +157,7 @@ BillSettlement settleBill(Bill bill, List<BillItem> items) {
   // của họ biến mất và bảng chốt sổ lệch đi đúng chừng ấy tiền.
   final people = Bill.mergeMembers(bill.members, [
     for (final item in items) ...[item.payer, ...item.people],
+    ...bill.repaid.keys,
   ]);
   for (final person in people) {
     paid[person] = 0;
@@ -156,6 +173,7 @@ BillSettlement settleBill(Bill bill, List<BillItem> items) {
     });
   }
 
+  final receivedBack = bill.repaid.values.fold(0, (sum, v) => sum + v);
   final members =
       [
         for (final person in people)
@@ -163,6 +181,8 @@ BillSettlement settleBill(Bill bill, List<BillItem> items) {
             person: person,
             paid: paid[person] ?? 0,
             owed: owed[person] ?? 0,
+            paidBack: person == Bill.me ? 0 : bill.repaid[person] ?? 0,
+            receivedBack: person == Bill.me ? receivedBack : 0,
           ),
       ]..sort((a, b) {
         final byNet = b.net.compareTo(a.net);

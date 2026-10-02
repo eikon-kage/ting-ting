@@ -230,7 +230,12 @@ class NotificationCapture {
       ),
     );
     if (saved == null) return false;
-    if (notify) await TxnAlerts.instance.show(saved);
+    if (notify) {
+      await TxnAlerts.instance.show(
+        saved,
+        repayment: await _data.repayments.matchFor(saved),
+      );
+    }
     return true;
   }
 

@@ -100,9 +100,21 @@ class BillController extends BaseController {
 
   /// Người này đã trả hoặc đang gánh mục nào đó — gỡ khỏi bill thì con số của
   /// họ vẫn còn trong bảng chốt sổ, nên màn hình không cho gỡ.
-  bool memberInUse(String person) => _items.any(
-    (item) => item.payer == person || item.people.contains(person),
-  );
+  bool memberInUse(String person) =>
+      (_bill?.repaid.containsKey(person) ?? false) ||
+      _items.any(
+        (item) => item.payer == person || item.people.contains(person),
+      );
+
+  /// Forgets what [person] paid back, for a payback marked by mistake. The
+  /// transaction itself stays in "Chia bill"; the user can move it from there.
+  Future<void> removeRepayment(String person) async {
+    final bill = _bill;
+    if (bill == null) return;
+    await data.bills.save(
+      bill.withoutRepayment(person).copyWith(settled: false),
+    );
+  }
 
   Future<void> saveItem(BillItem item) => data.bills.saveItem(item);
 

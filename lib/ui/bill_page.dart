@@ -99,6 +99,30 @@ class _BillPageState extends State<BillPage> {
     if (mounted) Navigator.of(context).pop();
   }
 
+  Future<void> _removeRepayment(String person) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Bỏ khoản $person đã trả?'),
+        content: const Text(
+          'Bill sẽ tính lại như thể chưa nhận được tiền. Giao dịch trong sổ '
+          'Thu–Chi vẫn giữ nguyên.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Thôi'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Bỏ'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) await _controller.removeRepayment(person);
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -159,6 +183,7 @@ class _BillPageState extends State<BillPage> {
                   onAddPeople: _addPeople,
                   isMemberInUse: _controller.memberInUse,
                   removeMember: _controller.removeMember,
+                  removeRepayment: _removeRepayment,
                 ),
         );
       },
@@ -175,6 +200,7 @@ class _BillBody extends StatelessWidget {
     required this.onAddPeople,
     required this.isMemberInUse,
     required this.removeMember,
+    required this.removeRepayment,
   });
 
   final Bill bill;
@@ -186,6 +212,7 @@ class _BillBody extends StatelessWidget {
   /// Người đang có mặt trong một khoản nào đó thì không gỡ ra được.
   final bool Function(String person) isMemberInUse;
   final Future<void> Function(String person) removeMember;
+  final Future<void> Function(String person) removeRepayment;
 
   @override
   Widget build(BuildContext context) {
@@ -248,6 +275,12 @@ class _BillBody extends StatelessWidget {
         else
           for (final transfer in settlement.transfers)
             _TransferTile(transfer: transfer),
+        for (final entry in bill.repaid.entries)
+          _RepaidTile(
+            person: entry.key,
+            amount: entry.value,
+            onRemove: () => removeRepayment(entry.key),
+          ),
         const _Section(title: 'Từng người'),
         for (final member in settlement.members) _MemberTile(member: member),
       ],
@@ -448,6 +481,37 @@ class _TransferTile extends StatelessWidget {
   }
 }
 
+/// A payback already received, kept visible so a wrong one can be undone.
+class _RepaidTile extends StatelessWidget {
+  const _RepaidTile({
+    required this.person,
+    required this.amount,
+    required this.onRemove,
+  });
+
+  final String person;
+  final int amount;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ListTile(
+      leading: Icon(
+        Icons.check_circle_rounded,
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
+      title: Text('$person đã trả bạn'),
+      subtitle: Text(formatMoney(amount)),
+      trailing: IconButton(
+        tooltip: 'Bỏ khoản này',
+        icon: const Icon(Icons.undo_rounded),
+        onPressed: onRemove,
+      ),
+    );
+  }
+}
+
 class _MemberTile extends StatelessWidget {
   const _MemberTile({required this.member});
 
@@ -462,7 +526,8 @@ class _MemberTile extends StatelessWidget {
       dense: true,
       title: Text(member.person),
       subtitle: Text(
-        'Đã trả ${formatMoney(member.paid)} · phần thật ${formatMoney(member.owed)}',
+        'Đã trả ${formatMoney(member.paid)} · phần thật ${formatMoney(member.owed)}'
+        '${member.paidBack > 0 ? ' · đã đưa bạn ${formatMoney(member.paidBack)}' : ''}',
       ),
       trailing: Text(
         net == 0 ? 'Hoà' : formatSigned(net.abs(), isIncome: net > 0),

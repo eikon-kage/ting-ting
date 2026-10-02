@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../../domain/repayment_match.dart';
 import '../../models/models.dart';
 import 'base_controller.dart';
 
@@ -15,6 +16,33 @@ class TxnDetailController extends BaseController {
   Timer? _noteDebounce;
 
   Txn get txn => _txn;
+
+  RepaymentMatch? _repayment;
+
+  /// Set when this money looks like someone paying the user back.
+  RepaymentMatch? get repayment => _repayment;
+
+  /// Checks whether the transaction pays off a debt or a bill share.
+  Future<void> findRepayment() async {
+    _repayment = await data.repayments.matchFor(_txn);
+    notify();
+  }
+
+  /// Records the repayment the user just confirmed, then re-reads the
+  /// transaction since it has moved to the debt book or the bill category.
+  Future<void> confirmRepayment() async {
+    final match = _repayment;
+    if (match == null) return;
+    _repayment = null;
+    notify();
+    await data.repayments.confirm(_txn, match);
+    await refresh();
+  }
+
+  void dismissRepayment() {
+    _repayment = null;
+    notify();
+  }
 
   /// Sheet nhận sẵn giao dịch nên không có gì phải tải lúc mở; hàm này chỉ
   /// dùng khi cần lấy lại bản mới nhất (ví dụ sau khi gán nợ).
@@ -37,6 +65,8 @@ class TxnDetailController extends BaseController {
   /// Cập nhật ngay trên màn rồi mới ghi xuống, để công tắc không bị giật.
   Future<void> apply(Txn updated) async {
     _txn = updated;
+    // Any manual change answers the question in its own way.
+    _repayment = null;
     notify();
     await data.txns.save(updated);
   }

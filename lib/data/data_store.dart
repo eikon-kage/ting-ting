@@ -15,6 +15,7 @@ import 'repositories/category_repository.dart';
 import 'repositories/debt_repository.dart';
 import 'repositories/parser_profile_repository.dart';
 import 'repositories/raw_log_repository.dart';
+import 'repositories/repayment_repository.dart';
 import 'repositories/report_repository.dart';
 import 'repositories/rule_repository.dart';
 import 'repositories/settings_repository.dart';
@@ -28,6 +29,7 @@ export 'repositories/category_repository.dart';
 export 'repositories/debt_repository.dart';
 export 'repositories/parser_profile_repository.dart';
 export 'repositories/raw_log_repository.dart';
+export 'repositories/repayment_repository.dart';
 export 'repositories/report_repository.dart';
 export 'repositories/rule_repository.dart';
 export 'repositories/settings_repository.dart';
@@ -48,6 +50,7 @@ class DataStore {
     required this.reports,
     required this.debts,
     required this.bills,
+    required this.repayments,
     required this.categories,
     required this.rules,
     required this.sources,
@@ -61,12 +64,16 @@ class DataStore {
     final changes = DataChanges();
     final txnDao = TxnDao(database);
     final ruleDao = RuleDao(database);
+    final txns = TxnRepository(txnDao, changes);
+    final debts = DebtRepository(txnDao, changes);
+    final bills = BillRepository(BillDao(database), changes);
     return DataStore._(
       changes: changes,
-      txns: TxnRepository(txnDao, changes),
+      txns: txns,
       reports: ReportRepository(txnDao),
-      debts: DebtRepository(txnDao, changes),
-      bills: BillRepository(BillDao(database), changes),
+      debts: debts,
+      bills: bills,
+      repayments: RepaymentRepository(txns, debts, bills),
       categories: CategoryRepository(
         CategoryDao(database),
         txnDao,
@@ -96,6 +103,9 @@ class DataStore {
 
   /// Các cuộc chia tiền chung.
   final BillRepository bills;
+
+  /// Spots incoming money that pays off a debt or a bill share.
+  final RepaymentRepository repayments;
 
   /// Nhóm chi tiêu user tự quản lý.
   final CategoryRepository categories;
